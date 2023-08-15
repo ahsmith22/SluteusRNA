@@ -1,0 +1,374 @@
+---
+title: "Sluteus_Final"
+output: pdf_document
+date: "2023-07-16"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(tximport)
+library(DESeq2)
+library(rhdf5)
+library(apeglm)
+library(EnhancedVolcano)
+library(ggplot2)
+library(data.table)
+library(RColorBrewer)
+library(VennDiagram)
+library(gplots)
+library(factoextra)
+library(FactoMineR)
+library(cowplot)
+library(ape)
+library(vegan)
+library(plotrix)
+
+padj.cutoff = 0.05
+lfc.cutoff = 1
+```
+
+# differential gene expression analysis
+```{r dds}
+# set working directory
+dir = "~/SluteusRNA/"
+filesj = list.files(paste0(dir, "counts"), "*.txt$", full.names = T) # file names for all count data files
+
+# create data frames for deseq
+sampleDataj = read_csv("~/SluteusRNA/sampleData.csv")
+treatData = read_csv("~/SluteusRNA/treatData.csv")
+treatData$znID = ifelse(treatData$znID == "-Zn", "nZn", "yZn")
+sampleDataj = right_join(treatData,sampleDataj)
+sampleDataj$locID = as.factor(sampleDataj$locID)
+sampleDataj$repID = as.factor(sampleDataj$repID)
+sampleDataj$znID = as.factor(sampleDataj$znID)
+sampleDataj$sampleID = as.factor(sampleDataj$sampleID)
+sampleDataj$tolID = ifelse(grepl("P",sampleDataj$locID),"Paal","Lommel")
+sampleDataj$tolID = as.factor(sampleDataj$tolID)
+sampleDataj = sampleDataj[,c(1:4,6)]
+sampleDataj$allID = paste0(sampleDataj$locID, "_", substr(sampleDataj$znID,1,1))
+
+# add EC50 values
+sampleDataEC = sampleDataj
+sampleDataEC$EC50 = c(rep(74.97,6),rep(77.06,5),rep(61.34,5),rep(103.93,6),rep(142.78,6),rep(207.78,6),rep(573.91,6),rep(641.84,6),rep(936.98,6),rep(396.10,6))
+sampleDataEC$tolID = c(rep("s",6),rep("s",5),rep("s",5),rep("s",6),rep("t",6),rep("t",6),rep("t",6),rep("t",6),rep("t",6),rep("t",6))
+
+# EC50 plot (Figure 1)
+ecplotdf = sampleDataEC[c(1,7,12,17,23,29,35,41,47,53),c(2,5,7)]
+ecplotdf$Site = c(rep("Non-contaminated",4),"Contaminated","Non-contaminated",rep("Contaminated",4))
+ecplotdf$Tolerance = c(rep("Sensitive",4),rep("Tolerant",6))
+ecplotdf$Tolerance = factor(ecplotdf$Tolerance, levels = c("Sensitive","Tolerant"))
+ecplotdf$locID = factor(ecplotdf$locID, levels = c("P1","P2","P13","PD14","PD13","LMD7","LM3","Sl20","LM5","LM12"))
+
+ECplot = ggplot(ecplotdf, aes(x=locID, y=EC50,shape=Site,color=Tolerance)) +
+  geom_point(size = 5) +
+  ylab(bquote(EC[50] (ppm))) +
+  theme(axis.title.x = element_blank(), text = element_text(size = 18))
+# ggsave("ECplot.png", width = 10, height = 6)
+ECplot
+
+# EC anova
+ECanova = lm(EC50 ~ Site, data = ecplotdf)
+summary(ECanova)
+
+# read in first count file
+countDataj = data.frame(fread(filesj[1]))
+
+# loop and read the 4th column remaining files
+for(i in 2:length(filesj)) {
+        countDataj = full_join(countDataj, data.frame(fread(filesj[i])))
+}
+
+# naming
+rownames(countDataj) = countDataj$GeneID
+countDataj = countDataj[,c(2:ncol(countDataj))]
+
+# remove low quality samples
+remsamp = c("HZHAY", "HZHAZ", "HZHAT")
+sampleDataEC = sampleDataEC[!(sampleDataEC$libraryName %in% remsamp),]
+countDataj = countDataj[,!names(countDataj) %in% remsamp]
+
+# deseq
+ddsTvS = DESeqDataSetFromMatrix(countData = countDataj, colData = sampleDataEC, design = ~ locID * znID)
+ddsTvS = DESeq(ddsTvS)
+
+cbind(resultsNames(ddsTvS))
+
+normalized_countsTvS = counts(ddsTvS, normalized=T)
+
+```
+
+```{r pca}
+# pca plot data frame
+vsdTvS = vst(ddsTvS)
+pcaDataTvS = plotPCA(vsdTvS, intgroup=c("locID","tolID","znID"), returnData=TRUE)
+percentVarTvS = round(100 * attr(pcaDataTvS, "percentVar"))
+pcaDataTvS$Tolerance = c(rep("Sensitive",20),rep("Tolerant",35))
+pcaDataTvS$Zinc = ifelse(pcaDataTvS$znID=="nZn", "No Zn", "Zn-amended")
+
+# averaged PCA
+pcaDataTvSa = pcaDataTvS %>% group_by(group) %>% summarise(PC1a = mean(PC1), PC1se = std.error(PC1), PC2a = mean(PC2), PC2se = std.error(PC2))
+pcaDataTvSa = inner_join(pcaDataTvSa, pcaDataTvS[,c(3:6,8,9)])
+pcaDataTvSa = pcaDataTvSa %>% distinct()
+pcaDataTvSa$Tolerance = factor(pcaDataTvSa$Tolerance, levels = c("Sensitive", "Tolerant"))
+
+# more averaged PCA
+pcaDataTvS$zntol = paste(pcaDataTvS$znID, pcaDataTvS$tolID, sep = "")
+pcaDataTvSaa = pcaDataTvS %>% group_by(zntol) %>% summarise(PC1a = mean(PC1), PC1se = std.error(PC1), PC2a = mean(PC2), PC2se = std.error(PC2))
+pcaDataTvSaa = inner_join(pcaDataTvSaa, pcaDataTvS[,c(5,6,8:10)])
+pcaDataTvSaa = pcaDataTvSaa %>% distinct()
+pcaDataTvSaa$Tolerance = factor(pcaDataTvSaa$Tolerance, levels = c("Sensitive", "Tolerant"))
+
+# plot PCA (Figure 2)
+pcaTvSa = ggplot(pcaDataTvSa, aes(PC1a, PC2a, color = Tolerance, fill = Tolerance)) + 
+  geom_point(aes(shape = Zinc), size = 4) + theme_bw() + 
+  stat_ellipse(geom = "polygon", level = .95, alpha = 0.1, show.legend = F) +
+  geom_errorbar(aes(ymin=PC2a-PC2se, ymax=PC2a+PC2se), alpha=0.5) +
+  geom_errorbarh(aes(xmin=PC1a-PC1se, xmax=PC1a+PC1se), alpha=0.5) +
+  geom_text_repel(aes(label = locID), nudge_x = -1.2, nudge_y = 0.3, size = 2, max.overlaps = 100) +
+  xlab(paste0("PC1: ",percentVarTvS[1],"% variance")) +
+  ylab(paste0("PC2: ",percentVarTvS[2],"% variance"))
+# ggsave("pcaTvSa.png", width = 9, height = 6, scale = .85)
+pcaTvSa
+
+# PCA stats adonis
+countDatajt = t(countDataj)
+countdist = vegdist(countDatajt, method = "jaccard")
+countdist = as.data.frame(as.matrix(countdist))
+countdist$libraryName = rownames(countdist)
+distdata = inner_join(countdist, sampleDataEC, by="libraryName") # create data matrix
+rownames(distdata) = rownames(countdist)
+
+alldistTvS = distdata %>% 
+  select(all_of(.[["libraryName"]])) %>% 
+  as.dist() # create distance matrix
+
+set.seed(22298)
+adonisTvS = adonis2(alldistTvS ~ znID * tolID, data = distdata, method = "jaccard", permutations = 9999)
+
+adonisTvS_pvals = adonisTvS$`Pr(>F)`[1:3]
+adonisTvS_adjpvals = p.adjust(adonisTvS_pvals, method = "BH") # calculate padj
+
+adonisTvS
+adonisTvS_adjpvals
+
+```
+
+```{r contrasts}
+# build contrasts
+conT = c(1,1/6,1/6,1/6,0,0,0,1/6,0,1/6,
+         1/2,1/12,1/12,1/12,0,0,0,1/12,0,1/12)
+conTn = c(1,1/6,1/6,1/6,0,0,0,1/6,0,1/6,
+          0,0,0,0,0,0,0,0,0,0)
+conTy = c(1,1/6,1/6,1/6,0,0,0,1/6,0,1/6,
+          1,1/6,1/6,1/6,0,0,0,1/6,0,1/6)
+conTzn = conTy - conTn
+conS = c(1,0,0,0,1/4,1/4,1/4,0,1/4,0,
+         1/2,0,0,0,1/8,1/8,1/8,0,1/8,0)
+conSn = c(1,0,0,8,1/4,1/4,1/4,0,1/4,0,
+          0,0,0,0,0,0,0,0,0,0)
+conSy = c(1,0,0,0,1/4,1/4,1/4,0,1/4,0,
+          1,0,0,0,1/4,1/4,1/4,0,1/4,0)
+conSzn = conSy - conSn
+conTvSe = conT - conS
+conInte = conTzn - conSzn
+conZne = c(0,0,0,0,0,0,0,0,0,0,
+          1,1/10,1/10,1/10,1/10,1/10,1/10,1/10,1/10,1/10)
+
+# results tables
+resTvSe = results(ddsTvS, contrast = conTvSe, cooksCutoff=FALSE)
+resTvSedf = as.data.frame(resTvSe@listData)
+rownames(resTvSedf) = resTvSe@rownames
+resInte = results(ddsTvS, contrast = conInte, cooksCutoff=FALSE)
+resIntedf = as.data.frame(resInte@listData)
+rownames(resIntedf) = resInte@rownames
+resZne = results(ddsTvS, contrast = conZne, cooksCutoff=FALSE)
+resZnedf = as.data.frame(resZne@listData)
+rownames(resZnedf) = resZne@rownames
+resTzn = results(ddsTvS, contrast = conTzn, cooksCutoff=FALSE)
+resTzndf = as.data.frame(resTzn@listData)
+rownames(resTzndf) = resTzn@rownames
+resSzn = results(ddsTvS, contrast = conSzn, cooksCutoff=FALSE)
+resSzndf = as.data.frame(resSzn@listData)
+rownames(resSzndf) = resSzn@rownames
+
+# count tables
+thresholdj = resZne$padj < padj.cutoff
+resZne$thresholdj = thresholdj
+sigZnetot = data.frame(subset(resZne, thresholdj==TRUE))
+norm_sigZnetot = as.matrix(normalized_countsTvS[rownames(sigZnetot),])
+DEGZnetot = rownames(norm_sigZnetot)
+thresholdj = resTvSe$padj < padj.cutoff
+resTvSe$thresholdj = thresholdj
+sigTvSetot = data.frame(subset(resTvSe, thresholdj==TRUE))
+norm_sigTvSetot = as.matrix(normalized_countsTvS[rownames(sigTvSetot),])
+DEGTvSetot = rownames(norm_sigTvSetot)
+thresholdj = resInte$padj < padj.cutoff
+resInte$thresholdj = thresholdj
+sigIntetot = data.frame(subset(resInte, thresholdj==TRUE))
+norm_sigIntetot = as.matrix(normalized_countsTvS[rownames(sigIntetot),])
+DEGIntetot = rownames(norm_sigIntetot)
+thresholdj = resTzn$padj < padj.cutoff
+resTzn$thresholdj = thresholdj
+sigTzntot = data.frame(subset(resTzn, thresholdj==TRUE))
+norm_sigTzntot = as.matrix(normalized_countsTvS[rownames(sigTzntot),])
+DEGTzntot = rownames(norm_sigTzntot)
+thresholdj = resSzn$padj < padj.cutoff
+resSzn$thresholdj = thresholdj
+sigSzntot = data.frame(subset(resSzn, thresholdj==TRUE))
+norm_sigSzntot = as.matrix(normalized_countsTvS[rownames(sigSzntot),])
+DEGSzntot = rownames(norm_sigSzntot)
+
+thresholdj = resTvSe$padj < padj.cutoff & abs(resTvSe$log2FoldChange) > lfc.cutoff
+resTvSe$thresholdj = thresholdj
+sigTvSe = data.frame(subset(resTvSe, thresholdj==TRUE))
+norm_sigTvSe = as.matrix(normalized_countsTvS[rownames(sigTvSe),])
+DEGTvSe = rownames(norm_sigTvSe)
+thresholdj = resInte$padj < padj.cutoff & abs(resInte$log2FoldChange) > lfc.cutoff
+resInte$thresholdj = thresholdj
+sigInte = data.frame(subset(resInte, thresholdj==TRUE))
+norm_sigInte = as.matrix(normalized_countsTvS[rownames(sigInte),])
+DEGInte = rownames(norm_sigInte)
+thresholdj = resZne$padj < padj.cutoff & abs(resZne$log2FoldChange) > lfc.cutoff
+resZne$thresholdj = thresholdj
+sigZne = data.frame(subset(resZne, thresholdj==TRUE))
+norm_sigZne = as.matrix(normalized_countsTvS[rownames(sigZne),])
+DEGZne = rownames(norm_sigZne)
+
+# all DEGs
+DEGa = unique(c(DEGZnetot,DEGTvSetot,DEGIntetot))
+# write.table(DEGa, "DEGall.txt", row.names = F, col.names = F)
+DEGa1 = unique(c(DEGZne,DEGTvSe,DEGInte))
+# write.table(DEGa1, "DEGall1.txt", row.names = F, col.names = F)
+
+# Volcano plots
+VolZne = EnhancedVolcano(data.frame(resZne), lab = rownames(resZne), x = 'log2FoldChange', y = 'padj',
+  xlab = bquote(~Log[2]~ 'fold change'), ylab = bquote(~-Log[10]~adjusted~italic(P)),
+  pCutoff = padj.cutoff, FCcutoff = lfc.cutoff, pointSize = 1.0, labSize = 2.0,
+  title = "Volcano plot", subtitle = "Zn treatment")
+# ggsave("VolZne.png", width = 9, height = 7)
+VolTvSe = EnhancedVolcano(data.frame(resTvSe), lab = rownames(resTvSe), x = 'log2FoldChange', y = 'padj',
+  xlab = bquote(~Log[2]~ 'fold change'), ylab = bquote(~-Log[10]~adjusted~italic(P)),
+  pCutoff = padj.cutoff, FCcutoff = lfc.cutoff, pointSize = 1.0, labSize = 2.0,
+  title = "Volcano plot", subtitle = "Tolerant vs Sensitive")
+# ggsave("VolTvSe.png", width = 9, height = 7)
+VolInte = EnhancedVolcano(data.frame(resInte), lab = rownames(resInte), x = 'log2FoldChange', y = 'padj',
+  xlab = bquote(~Log[2]~ 'fold change'), ylab = bquote(~-Log[10]~adjusted~italic(P)),
+  pCutoff = padj.cutoff, FCcutoff = lfc.cutoff, pointSize = 1.0, labSize = 2.0,
+  title = "Volcano plot", subtitle = "Interaction")
+# ggsave("VolInte.png", width = 9, height = 7)
+
+VolTvSe
+VolInte
+VolZne
+
+# venn with DEG proteins TvS
+colors1 = brewer.pal(3, "YlOrRd")
+venn.diagram(x = list(DEGZnetot,DEGTvSetot,DEGIntetot),
+    category.names = c("Zn vs nZn (124)" , "TvSe (6709)" , "Interaction (4098)"),
+    filename = "vennmainintetot.png",
+    imagetype="png" ,
+    col = c(colors1[1],colors1[2],colors1[3]) ,
+    fill = c(alpha(colors1[1],0.3),alpha(colors1[2],0.3),alpha(colors1[3],0.3))
+)
+
+# DEG summary plot (Figure 3)
+DEGsum = as.data.frame(matrix(data = c(c(4250, 50, 4098),c("Tolerance","Zn treatment","Tolerance x\nZn treatment")), nrow = 3, ncol = 2))
+colnames(DEGsum) = c("val","name")
+DEGsum$val = as.numeric(DEGsum$val)
+DEGsum$name = factor(DEGsum$name, levels = c("Tolerance","Zn treatment","Tolerance x\nZn treatment"))
+
+ggplot(DEGsum, aes(name, val)) +
+  geom_col() + theme_half_open() +
+  geom_text(aes(label = val), nudge_y = 150) + 
+  scale_y_continuous(limits = c(0,4500)) +
+  ylab("# of Significantly DE Genes") +
+  theme(axis.title.x = element_blank())
+# ggsave("DEGsumplot.png", width = 5, height = 6)
+
+# DEG lists for ClueGO
+# write.table(DEGZne, file = "DEGZne.txt", row.names = F, col.names = F)
+# write.table(DEGTvSe, file = "DEGTvSe.txt", row.names = F, col.names = F)
+# write.table(DEGInte, file = "DEGInte.txt", row.names = F, col.names = F)
+
+```
+
+# gene categories
+```{r gene categories}
+# fix rownames
+for (x in 1:nrow(resZnedf)) {
+  hold = unlist(strsplit(rownames(resZnedf)[x], split = "u"))[3]
+  hold = substr(hold,3,nchar(hold))
+  rownames(resZnedf)[x] = hold
+}
+rownames(resTvSedf) = rownames(resZnedf)
+rownames(resIntedf) = rownames(resZnedf)
+rownames(resZnedf) = rownames(resZnedf)
+rownames(resTzndf) = rownames(resZnedf)
+rownames(resSzndf) = rownames(resZnedf)
+
+resTvSedf$proteinID = rownames(resZnedf)
+resIntedf$proteinID = rownames(resZnedf)
+resZnedf$proteinID = rownames(resZnedf)
+resTzndf$proteinID = rownames(resZnedf)
+resSzndf$proteinID = rownames(resZnedf)
+
+# zn transporters
+zntrns = c("2764984","2846331","2854961","2859797","1739397","2856429","2893674","810602","72605")
+
+zntrnszne = resZnedf[resZnedf$proteinID %in% zntrns,]
+zntrnsTvSe = resTvSedf[resTvSedf$proteinID %in% zntrns,]
+zntrnsInte = resIntedf[resIntedf$proteinID %in% zntrns,]
+zntrnsTzn = resTzndf[resTzndf$proteinID %in% zntrns,]
+zntrnsSzn = resSzndf[resSzndf$proteinID %in% zntrns,]
+
+# write.csv(zntrnszne, file = "zntrnszne.csv")
+# write.csv(zntrnsTvSe, file = "zntrnsTvSe.csv")
+# write.csv(zntrnsInte, file = "zntrnsInte.csv")
+# write.csv(zntrnsTzn, file = "zntrnsTzn.csv")
+# write.csv(zntrnsSzn, file = "zntrnsSzn.csv")
+
+# annas table
+annast = c("2921934","2898571","2861746","2848300","2854576","2861857","2852980","2921647","2849043","2623337","2722447","83946")
+
+annastzne = resZnedf[resZnedf$proteinID %in% annast,]
+annastTvSe = resTvSedf[resTvSedf$proteinID %in% annast,]
+annastInte = resIntedf[resIntedf$proteinID %in% annast,]
+annastTzn = resTzndf[resTzndf$proteinID %in% annast,]
+annastSzn = resSzndf[resSzndf$proteinID %in% annast,]
+
+# write.csv(annastzne, file = "annastzne.csv")
+# write.csv(annastTvSe, file = "annastTvSe.csv")
+# write.csv(annastInte, file = "annastInte.csv")
+# write.csv(annastTzn, file = "annastTzn.csv")
+# write.csv(annastSzn, file = "annastSzn.csv")
+
+# PDRs
+pdrs = c("2866415", "2866417", "2920252")
+
+pdrszne = resZnedf[resZnedf$proteinID %in% pdrs,]
+pdrsTvSe = resTvSedf[resTvSedf$proteinID %in% pdrs,]
+pdrsInte = resIntedf[resIntedf$proteinID %in% pdrs,]
+pdrsTzn = resTzndf[resTzndf$proteinID %in% pdrs,]
+pdrsSzn = resSzndf[resSzndf$proteinID %in% pdrs,]
+
+# fungal hydrophobins
+funhydro = c("2807124", "2849092", "2854866", "2854868", "2921554", "2921556", "2921647")
+
+funhydrozne = resZnedf[resZnedf$proteinID %in% funhydro,]
+funhydroTvSe = resTvSedf[resTvSedf$proteinID %in% funhydro,]
+funhydroInte = resIntedf[resIntedf$proteinID %in% funhydro,]
+funhydroTzn = resTzndf[resTzndf$proteinID %in% funhydro,]
+funhydroSzn = resSzndf[resSzndf$proteinID %in% funhydro,]
+
+# MAPks
+MAPKtab <- read_csv("11551948259379302.csv")
+mapks = as.character(MAPKtab$`Protein Id`)
+
+mapkszne = resZnedf[resZnedf$proteinID %in% mapks,]
+mapksTvSe = resTvSedf[resTvSedf$proteinID %in% mapks,]
+mapksInte = resIntedf[resIntedf$proteinID %in% mapks,]
+mapksTzn = resTzndf[resTzndf$proteinID %in% mapks,]
+mapksSzn = resSzndf[resSzndf$proteinID %in% mapks,]
+```
+
