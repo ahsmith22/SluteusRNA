@@ -23,6 +23,15 @@ library(cowplot)
 library(ape)
 library(vegan)
 library(plotrix)
+library(Rgraphviz)
+library(gridExtra)
+library(textshape)
+library(CorLevelPlot)
+library(pheatmap)
+library(topGO)
+library(lintr)
+library(lattice)
+library(WGCNA)
 
 padj.cutoff = 0.05
 lfc.cutoff = 1
@@ -31,12 +40,12 @@ lfc.cutoff = 1
 # differential gene expression analysis
 ```{r dds}
 # set working directory
-dir = "~/SluteusRNA/"
+dir = "~/SluteusRNA/Data/"
 filesj = list.files(paste0(dir, "counts"), "*.txt$", full.names = T) # file names for all count data files
 
 # create data frames for deseq
-sampleDataj = read_csv("~/SluteusRNA/sampleData.csv")
-treatData = read_csv("~/SluteusRNA/treatData.csv")
+sampleDataj = read_csv("~/SluteusRNA/Data/sampleData.csv")
+treatData = read_csv("~/SluteusRNA/Data/treatData.csv")
 treatData$znID = ifelse(treatData$znID == "-Zn", "nZn", "yZn")
 sampleDataj = right_join(treatData,sampleDataj)
 sampleDataj$locID = as.factor(sampleDataj$locID)
@@ -56,15 +65,17 @@ sampleDataEC$tolID = c(rep("s",6),rep("s",5),rep("s",5),rep("s",6),rep("t",6),re
 # EC50 plot (Figure 1)
 ecplotdf = sampleDataEC[c(1,7,12,17,23,29,35,41,47,53),c(2,5,7)]
 ecplotdf$Site = c(rep("Non-contaminated",4),"Contaminated","Non-contaminated",rep("Contaminated",4))
+ecplotdf$siteID = c("NC2","NC3","NC1","NC4","C1","NC5","C3","C4","C5","C2")
 ecplotdf$Tolerance = c(rep("Sensitive",4),rep("Tolerant",6))
 ecplotdf$Tolerance = factor(ecplotdf$Tolerance, levels = c("Sensitive","Tolerant"))
 ecplotdf$locID = factor(ecplotdf$locID, levels = c("P1","P2","P13","PD14","PD13","LMD7","LM3","Sl20","LM5","LM12"))
+ecplotdf$siteID = factor(ecplotdf$siteID, levels = c("NC1","NC2","NC3","NC4","C1","NC5","C2","C3","C4","C5"))
 
-ECplot = ggplot(ecplotdf, aes(x=locID, y=EC50,shape=Site,color=Tolerance)) +
+ECplot = ggplot(ecplotdf, aes(x=siteID, y=EC50,shape=Site,color=Tolerance)) +
   geom_point(size = 5) +
   ylab(bquote(EC[50] (ppm))) +
   theme(axis.title.x = element_blank(), text = element_text(size = 18))
-# ggsave("ECplot.png", width = 10, height = 6)
+# ggsave("~/SluteusRNA/Figures/ECplot.png", width = 10, height = 6)
 ECplot
 
 # EC anova
@@ -88,36 +99,415 @@ remsamp = c("HZHAY", "HZHAZ", "HZHAT")
 sampleDataEC = sampleDataEC[!(sampleDataEC$libraryName %in% remsamp),]
 countDataj = countDataj[,!names(countDataj) %in% remsamp]
 
-# deseq
+# deseq analysis
 ddsTvS = DESeqDataSetFromMatrix(countData = countDataj, colData = sampleDataEC, design = ~ locID * znID)
+keep <- rowSums(counts(ddsTvS)) >= 10 #remove genes with lower than 10 overall counts
+ddsTvS <- ddsTvS[keep,]
+
 ddsTvS = DESeq(ddsTvS)
 
 cbind(resultsNames(ddsTvS))
 
 normalized_countsTvS = counts(ddsTvS, normalized=T)
+```
 
+```{r volcano plots}
+# create volcano plots for each individual isolate
+
+sampleDataEC1 = split(sampleDataEC, f = sampleDataEC$locID) #split data by isolate
+
+# create data frames for each isolate to run deseq on
+for (x in 1:length(sampleDataEC1)) {
+  name = paste("sampleData", sampleDataEC1[[x]][["locID"]], sep = "")
+  assign(name, sampleDataEC1[[x]])
+  name1 = paste("countData", sampleDataEC1[[x]][["locID"]], sep = "")
+  assign(name1, countDataj[,names(countDataj)%in%sampleDataEC1[[x]][["libraryName"]]])
+}
+
+# Volcano Plot for LM12
+ddsLM12 = DESeqDataSetFromMatrix(countData = countDataLM12, colData = sampleDataLM12, design = ~znID)
+keep = rowSums(counts(ddsLM12)) >= 10
+ddsLM12 = ddsLM12[keep,]
+ddsLM12 = DESeq(ddsLM12)
+cbind(resultsNames(ddsLM12))
+normalized_countsLM12 = counts(ddsLM12, normalized=T)
+resLM12 = results(ddsLM12, alpha = 0.05)
+resLM12df = as.data.frame(resLM12@listData)
+rownames(resLM12df) = resLM12@rownames
+# write.csv(normalized_countsLM12, "~/SluteusRNA/Tables/normcountsLM12.csv")
+# write.csv(resLM12, "~/SluteusRNA/Tables/comparisonLM12.deseq.csv")
+
+keyvals <- ifelse(
+  resLM12df$log2FoldChange < -1.5 & resLM12df$pvalue <= 0.05, 'blue',
+  ifelse(resLM12df$log2FoldChange > 1.5 & resLM12df$pvalue <= 0.05, 'red',
+         'black'))
+keyvals[is.na(keyvals)] <- 'black'
+names(keyvals)[keyvals == 'red'] <- 'upregulated'
+names(keyvals)[keyvals == 'blue'] <- 'down-regualted'
+
+EnhancedVolcano(resLM12df,
+                lab = rownames(resLM12df),
+                selectLab = c('1'),
+                x = 'log2FoldChange',
+                y = 'pvalue',
+                title = "LM12",
+                subtitle = NULL,
+                colCustom = keyvals,
+                pCutoff = 0.05,
+                FCcutoff = 1.5,
+                colAlpha = 0.9,
+                gridlines.major = T,
+                gridlines.minor = FALSE) +
+  ggplot2::coord_cartesian(xlim=c(-10, 10))
+# ggsave("~/SluteusRNA/Figures/VolLM12.png", width = 9, height = 7)
+
+# Volcano Plot for LM3
+ddsLM3 = DESeqDataSetFromMatrix(countData = countDataLM3, colData = sampleDataLM3, design = ~znID)
+keep = rowSums(counts(ddsLM3)) >= 10
+ddsLM3 = ddsLM3[keep,]
+ddsLM3 = DESeq(ddsLM3)
+cbind(resultsNames(ddsLM3))
+normalized_countsLM3 = counts(ddsLM3, normalized=T)
+resLM3 = results(ddsLM3, alpha = 0.05)
+resLM3df = as.data.frame(resLM3@listData)
+rownames(resLM3df) = resLM3@rownames
+# write.csv(normalized_countsLM3, "~/SluteusRNA/Tables/normcountsLM3.csv")
+# write.csv(resLM3, "~/SluteusRNA/Tables/comparisonLM3.deseq.csv")
+
+keyvals <- ifelse(
+  resLM3df$log2FoldChange < -1.5 & resLM3df$pvalue <= 0.05, 'blue',
+  ifelse(resLM3df$log2FoldChange > 1.5 & resLM3df$pvalue <= 0.05, 'red',
+         'black'))
+keyvals[is.na(keyvals)] <- 'black'
+names(keyvals)[keyvals == 'red'] <- 'upregulated'
+names(keyvals)[keyvals == 'blue'] <- 'down-regualted'
+
+EnhancedVolcano(resLM3df,
+                lab = rownames(resLM3df),
+                selectLab = c('1'),
+                x = 'log2FoldChange',
+                y = 'pvalue',
+                title = "LM3",
+                subtitle = NULL,
+                colCustom = keyvals,
+                pCutoff = 0.05,
+                FCcutoff = 1.5,
+                colAlpha = 0.9,
+                gridlines.major = T,
+                gridlines.minor = FALSE) +
+  ggplot2::coord_cartesian(xlim=c(-10, 10))
+# ggsave("~/SluteusRNA/Figures/VolLM3.png", width = 9, height = 7)
+
+# Volcano Plot for LM5
+ddsLM5 = DESeqDataSetFromMatrix(countData = countDataLM5, colData = sampleDataLM5, design = ~znID)
+keep = rowSums(counts(ddsLM5)) >= 10
+ddsLM5 = ddsLM5[keep,]
+ddsLM5 = DESeq(ddsLM5)
+cbind(resultsNames(ddsLM5))
+normalized_countsLM5 = counts(ddsLM5, normalized=T)
+resLM5 = results(ddsLM5, alpha = 0.05)
+resLM5df = as.data.frame(resLM5@listData)
+rownames(resLM5df) = resLM5@rownames
+# write.csv(normalized_countsLM5, "~/SluteusRNA/Tables/normcountsLM5.csv")
+# write.csv(resLM5, "~/SluteusRNA/Tables/comparisonLM5.deseq.csv")
+
+keyvals <- ifelse(
+  resLM5df$log2FoldChange < -1.5 & resLM5df$pvalue <= 0.05, 'blue',
+  ifelse(resLM5df$log2FoldChange > 1.5 & resLM5df$pvalue <= 0.05, 'red',
+         'black'))
+keyvals[is.na(keyvals)] <- 'black'
+names(keyvals)[keyvals == 'red'] <- 'upregulated'
+names(keyvals)[keyvals == 'blue'] <- 'down-regualted'
+
+EnhancedVolcano(resLM5df,
+                lab = rownames(resLM5df),
+                selectLab = c('1'),
+                x = 'log2FoldChange',
+                y = 'pvalue',
+                title = "LM5",
+                subtitle = NULL,
+                colCustom = keyvals,
+                pCutoff = 0.05,
+                FCcutoff = 1.5,
+                colAlpha = 0.9,
+                gridlines.major = T,
+                gridlines.minor = FALSE) +
+  ggplot2::coord_cartesian(xlim=c(-10, 10))
+# ggsave("~/SluteusRNA/Figures/VolLM5.png", width = 9, height = 7)
+
+# Volcano Plot for LMD7
+ddsLMD7 = DESeqDataSetFromMatrix(countData = countDataLMD7, colData = sampleDataLMD7, design = ~znID)
+keep = rowSums(counts(ddsLMD7)) >= 10
+ddsLMD7 = ddsLMD7[keep,]
+ddsLMD7 = DESeq(ddsLMD7)
+cbind(resultsNames(ddsLMD7))
+normalized_countsLMD7 = counts(ddsLMD7, normalized=T)
+resLMD7 = results(ddsLMD7, alpha = 0.05)
+resLMD7df = as.data.frame(resLMD7@listData)
+rownames(resLMD7df) = resLMD7@rownames
+# write.csv(normalized_countsLMD7, "~/SluteusRNA/Tables/normcountsLMD7.csv")
+# write.csv(resLMD7, "~/SluteusRNA/Tables/comparisonLMD7.deseq.csv")
+
+keyvals <- ifelse(
+  resLMD7df$log2FoldChange < -1.5 & resLMD7df$pvalue <= 0.05, 'blue',
+  ifelse(resLMD7df$log2FoldChange > 1.5 & resLMD7df$pvalue <= 0.05, 'red',
+         'black'))
+keyvals[is.na(keyvals)] <- 'black'
+names(keyvals)[keyvals == 'red'] <- 'upregulated'
+names(keyvals)[keyvals == 'blue'] <- 'down-regualted'
+
+EnhancedVolcano(resLMD7df,
+                lab = rownames(resLMD7df),
+                selectLab = c('1'),
+                x = 'log2FoldChange',
+                y = 'pvalue',
+                title = "LMD7",
+                subtitle = NULL,
+                colCustom = keyvals,
+                pCutoff = 0.05,
+                FCcutoff = 1.5,
+                colAlpha = 0.9,
+                gridlines.major = T,
+                gridlines.minor = FALSE) +
+  ggplot2::coord_cartesian(xlim=c(-10, 10))
+# ggsave("~/SluteusRNA/Figures/VolLMD7.png", width = 9, height = 7)
+
+# Volcano Plot for P1
+ddsP1 = DESeqDataSetFromMatrix(countData = countDataP1, colData = sampleDataP1, design = ~znID)
+keep = rowSums(counts(ddsP1)) >= 10
+ddsP1 = ddsP1[keep,]
+ddsP1 = DESeq(ddsP1)
+cbind(resultsNames(ddsP1))
+normalized_countsP1 = counts(ddsP1, normalized=T)
+resP1 = results(ddsP1, alpha = 0.05)
+resP1df = as.data.frame(resP1@listData)
+rownames(resP1df) = resP1@rownames
+# write.csv(normalized_countsP1, "~/SluteusRNA/Tables/normcountsP1.csv")
+# write.csv(resP1, "~/SluteusRNA/Tables/comparisonP1.deseq.csv")
+
+keyvals <- ifelse(
+  resP1df$log2FoldChange < -1.5 & resP1df$pvalue <= 0.05, 'blue',
+  ifelse(resP1df$log2FoldChange > 1.5 & resP1df$pvalue <= 0.05, 'red',
+         'black'))
+keyvals[is.na(keyvals)] <- 'black'
+names(keyvals)[keyvals == 'red'] <- 'upregulated'
+names(keyvals)[keyvals == 'blue'] <- 'down-regualted'
+
+EnhancedVolcano(resP1df,
+                lab = rownames(resP1df),
+                selectLab = c('1'),
+                x = 'log2FoldChange',
+                y = 'pvalue',
+                title = "P1",
+                subtitle = NULL,
+                colCustom = keyvals,
+                pCutoff = 0.05,
+                FCcutoff = 1.5,
+                colAlpha = 0.9,
+                gridlines.major = T,
+                gridlines.minor = FALSE) +
+  ggplot2::coord_cartesian(xlim=c(-10, 10))
+# ggsave("~/SluteusRNA/Figures/VolP1.png", width = 9, height = 7)
+
+# Volcano Plot for P13
+ddsP13 = DESeqDataSetFromMatrix(countData = countDataP13, colData = sampleDataP13, design = ~znID)
+keep = rowSums(counts(ddsP13)) >= 10
+ddsP13 = ddsP13[keep,]
+ddsP13 = DESeq(ddsP13)
+cbind(resultsNames(ddsP13))
+normalized_countsP13 = counts(ddsP13, normalized=T)
+resP13 = results(ddsP13, alpha = 0.05)
+resP13df = as.data.frame(resP13@listData)
+rownames(resP13df) = resP13@rownames
+# write.csv(normalized_countsP13, "~/SluteusRNA/Tables/normcountsP13.csv")
+# write.csv(resP13, "~/SluteusRNA/Tables/comparisonP13.deseq.csv")
+
+keyvals <- ifelse(
+  resP13df$log2FoldChange < -1.5 & resP13df$pvalue <= 0.05, 'blue',
+  ifelse(resP13df$log2FoldChange > 1.5 & resP13df$pvalue <= 0.05, 'red',
+         'black'))
+keyvals[is.na(keyvals)] <- 'black'
+names(keyvals)[keyvals == 'red'] <- 'upregulated'
+names(keyvals)[keyvals == 'blue'] <- 'down-regualted'
+
+EnhancedVolcano(resP13df,
+                lab = rownames(resP13df),
+                selectLab = c('1'),
+                x = 'log2FoldChange',
+                y = 'pvalue',
+                title = "P13",
+                subtitle = NULL,
+                colCustom = keyvals,
+                pCutoff = 0.05,
+                FCcutoff = 1.5,
+                colAlpha = 0.9,
+                gridlines.major = T,
+                gridlines.minor = FALSE) +
+  ggplot2::coord_cartesian(xlim=c(-10, 10))
+# ggsave("~/SluteusRNA/Figures/VolP13.png", width = 9, height = 7)
+
+# Volcano Plot for P2
+ddsP2 = DESeqDataSetFromMatrix(countData = countDataP2, colData = sampleDataP2, design = ~znID)
+keep = rowSums(counts(ddsP2)) >= 10
+ddsP2 = ddsP2[keep,]
+ddsP2 = DESeq(ddsP2)
+cbind(resultsNames(ddsP2))
+normalized_countsP2 = counts(ddsP2, normalized=T)
+resP2 = results(ddsP2, alpha = 0.05)
+resP2df = as.data.frame(resP2@listData)
+rownames(resP2df) = resP2@rownames
+# write.csv(normalized_countsP2, "~/SluteusRNA/Tables/normcountsP2.csv")
+# write.csv(resP2, "~/SluteusRNA/Tables/comparisonP2.deseq.csv")
+
+keyvals <- ifelse(
+  resP2df$log2FoldChange < -1.5 & resP2df$pvalue <= 0.05, 'blue',
+  ifelse(resP2df$log2FoldChange > 1.5 & resP2df$pvalue <= 0.05, 'red',
+         'black'))
+keyvals[is.na(keyvals)] <- 'black'
+names(keyvals)[keyvals == 'red'] <- 'upregulated'
+names(keyvals)[keyvals == 'blue'] <- 'down-regualted'
+
+EnhancedVolcano(resP2df,
+                lab = rownames(resP2df),
+                selectLab = c('1'),
+                x = 'log2FoldChange',
+                y = 'pvalue',
+                title = "P2",
+                subtitle = NULL,
+                colCustom = keyvals,
+                pCutoff = 0.05,
+                FCcutoff = 1.5,
+                colAlpha = 0.9,
+                gridlines.major = T,
+                gridlines.minor = FALSE) +
+  ggplot2::coord_cartesian(xlim=c(-10, 10))
+# ggsave("~/SluteusRNA/Figures/VolP2.png", width = 9, height = 7)
+
+# Volcano Plot for PD13
+ddsPD13 = DESeqDataSetFromMatrix(countData = countDataPD13, colData = sampleDataPD13, design = ~znID)
+keep = rowSums(counts(ddsPD13)) >= 10
+ddsPD13 = ddsPD13[keep,]
+ddsPD13 = DESeq(ddsPD13)
+cbind(resultsNames(ddsPD13))
+normalized_countsPD13 = counts(ddsPD13, normalized=T)
+resPD13 = results(ddsPD13, alpha = 0.05)
+resPD13df = as.data.frame(resPD13@listData)
+rownames(resPD13df) = resPD13@rownames
+# write.csv(normalized_countsPD13, "~/SluteusRNA/Tables/normcountsPD13.csv")
+# write.csv(resPD13, "~/SluteusRNA/Tables/comparisonPD13.deseq.csv")
+
+keyvals <- ifelse(
+  resPD13df$log2FoldChange < -1.5 & resPD13df$pvalue <= 0.05, 'blue',
+  ifelse(resPD13df$log2FoldChange > 1.5 & resPD13df$pvalue <= 0.05, 'red',
+         'black'))
+keyvals[is.na(keyvals)] <- 'black'
+names(keyvals)[keyvals == 'red'] <- 'upregulated'
+names(keyvals)[keyvals == 'blue'] <- 'down-regualted'
+
+EnhancedVolcano(resPD13df,
+                lab = rownames(resPD13df),
+                selectLab = c('1'),
+                x = 'log2FoldChange',
+                y = 'pvalue',
+                title = "PD13",
+                subtitle = NULL,
+                colCustom = keyvals,
+                pCutoff = 0.05,
+                FCcutoff = 1.5,
+                colAlpha = 0.9,
+                gridlines.major = T,
+                gridlines.minor = FALSE) +
+  ggplot2::coord_cartesian(xlim=c(-10, 10))
+# ggsave("~/SluteusRNA/Figures/VolPD13.png", width = 9, height = 7)
+
+# Volcano Plot for PD14
+ddsPD14 = DESeqDataSetFromMatrix(countData = countDataPD14, colData = sampleDataPD14, design = ~znID)
+keep = rowSums(counts(ddsPD14)) >= 10
+ddsPD14 = ddsPD14[keep,]
+ddsPD14 = DESeq(ddsPD14)
+cbind(resultsNames(ddsPD14))
+normalized_countsPD14 = counts(ddsPD14, normalized=T)
+resPD14 = results(ddsPD14, alpha = 0.05)
+resPD14df = as.data.frame(resPD14@listData)
+rownames(resPD14df) = resPD14@rownames
+# write.csv(normalized_countsPD14, "~/SluteusRNA/Tables/normcountsPD14.csv")
+# write.csv(resPD14, "~/SluteusRNA/Tables/comparisonPD14.deseq.csv")
+
+keyvals <- ifelse(
+  resPD14df$log2FoldChange < -1.5 & resPD14df$pvalue <= 0.05, 'blue',
+  ifelse(resPD14df$log2FoldChange > 1.5 & resPD14df$pvalue <= 0.05, 'red',
+         'black'))
+keyvals[is.na(keyvals)] <- 'black'
+names(keyvals)[keyvals == 'red'] <- 'upregulated'
+names(keyvals)[keyvals == 'blue'] <- 'down-regualted'
+
+EnhancedVolcano(resPD14df,
+                lab = rownames(resPD14df),
+                selectLab = c('1'),
+                x = 'log2FoldChange',
+                y = 'pvalue',
+                title = "PD14",
+                subtitle = NULL,
+                colCustom = keyvals,
+                pCutoff = 0.05,
+                FCcutoff = 1.5,
+                colAlpha = 0.9,
+                gridlines.major = T,
+                gridlines.minor = FALSE) +
+  ggplot2::coord_cartesian(xlim=c(-10, 10))
+# ggsave("~/SluteusRNA/Figures/VolPD14.png", width = 9, height = 7)
+
+# Volcano Plot for Sl20
+ddsSl20 = DESeqDataSetFromMatrix(countData = countDataSl20, colData = sampleDataSl20, design = ~znID)
+keep = rowSums(counts(ddsSl20)) >= 10
+ddsSl20 = ddsSl20[keep,]
+ddsSl20 = DESeq(ddsSl20)
+cbind(resultsNames(ddsSl20))
+normalized_countsSl20 = counts(ddsSl20, normalized=T)
+resSl20 = results(ddsSl20, alpha = 0.05)
+resSl20df = as.data.frame(resSl20@listData)
+rownames(resSl20df) = resSl20@rownames
+# write.csv(normalized_countsSl20, "~/SluteusRNA/Tables/normcountsSl20.csv")
+# write.csv(resSl20, "~/SluteusRNA/Tables/comparisonSl20.deseq.csv")
+
+keyvals <- ifelse(
+  resSl20df$log2FoldChange < -1.5 & resSl20df$pvalue <= 0.05, 'blue',
+  ifelse(resSl20df$log2FoldChange > 1.5 & resSl20df$pvalue <= 0.05, 'red',
+         'black'))
+keyvals[is.na(keyvals)] <- 'black'
+names(keyvals)[keyvals == 'red'] <- 'upregulated'
+names(keyvals)[keyvals == 'blue'] <- 'down-regualted'
+
+EnhancedVolcano(resSl20df,
+                lab = rownames(resSl20df),
+                selectLab = c('1'),
+                x = 'log2FoldChange',
+                y = 'pvalue',
+                title = "Sl20",
+                subtitle = NULL,
+                colCustom = keyvals,
+                pCutoff = 0.05,
+                FCcutoff = 1.5,
+                colAlpha = 0.9,
+                gridlines.major = T,
+                gridlines.minor = FALSE) +
+  ggplot2::coord_cartesian(xlim=c(-10, 10))
+# ggsave("~/SluteusRNA/Figures/VolSl20.png", width = 9, height = 7)
 ```
 
 ```{r pca}
 # pca plot data frame
-vsdTvS = vst(ddsTvS)
+vsdTvS = vst(ddsTvS) #vst transform data
 pcaDataTvS = plotPCA(vsdTvS, intgroup=c("locID","tolID","znID"), returnData=TRUE)
 percentVarTvS = round(100 * attr(pcaDataTvS, "percentVar"))
 pcaDataTvS$Tolerance = c(rep("Sensitive",20),rep("Tolerant",35))
 pcaDataTvS$Zinc = ifelse(pcaDataTvS$znID=="nZn", "No Zn", "Zn-amended")
 
-# averaged PCA
+# PCA averaged over replicates
 pcaDataTvSa = pcaDataTvS %>% group_by(group) %>% summarise(PC1a = mean(PC1), PC1se = std.error(PC1), PC2a = mean(PC2), PC2se = std.error(PC2))
 pcaDataTvSa = inner_join(pcaDataTvSa, pcaDataTvS[,c(3:6,8,9)])
 pcaDataTvSa = pcaDataTvSa %>% distinct()
 pcaDataTvSa$Tolerance = factor(pcaDataTvSa$Tolerance, levels = c("Sensitive", "Tolerant"))
-
-# more averaged PCA
-pcaDataTvS$zntol = paste(pcaDataTvS$znID, pcaDataTvS$tolID, sep = "")
-pcaDataTvSaa = pcaDataTvS %>% group_by(zntol) %>% summarise(PC1a = mean(PC1), PC1se = std.error(PC1), PC2a = mean(PC2), PC2se = std.error(PC2))
-pcaDataTvSaa = inner_join(pcaDataTvSaa, pcaDataTvS[,c(5,6,8:10)])
-pcaDataTvSaa = pcaDataTvSaa %>% distinct()
-pcaDataTvSaa$Tolerance = factor(pcaDataTvSaa$Tolerance, levels = c("Sensitive", "Tolerant"))
 
 # plot PCA (Figure 2)
 pcaTvSa = ggplot(pcaDataTvSa, aes(PC1a, PC2a, color = Tolerance, fill = Tolerance)) + 
@@ -128,10 +518,10 @@ pcaTvSa = ggplot(pcaDataTvSa, aes(PC1a, PC2a, color = Tolerance, fill = Toleranc
   geom_text_repel(aes(label = locID), nudge_x = -1.2, nudge_y = 0.3, size = 2, max.overlaps = 100) +
   xlab(paste0("PC1: ",percentVarTvS[1],"% variance")) +
   ylab(paste0("PC2: ",percentVarTvS[2],"% variance"))
-# ggsave("pcaTvSa.png", width = 9, height = 6, scale = .85)
+# ggsave("~/SluteusRNA/Figures/pcaTvSa.png", width = 9, height = 6, scale = .85)
 pcaTvSa
 
-# PCA stats adonis
+# PCA stats by adonis method
 countDatajt = t(countDataj)
 countdist = vegdist(countDatajt, method = "jaccard")
 countdist = as.data.frame(as.matrix(countdist))
@@ -165,7 +555,7 @@ conTy = c(1,1/6,1/6,1/6,0,0,0,1/6,0,1/6,
 conTzn = conTy - conTn
 conS = c(1,0,0,0,1/4,1/4,1/4,0,1/4,0,
          1/2,0,0,0,1/8,1/8,1/8,0,1/8,0)
-conSn = c(1,0,0,8,1/4,1/4,1/4,0,1/4,0,
+conSn = c(1,0,0,0,1/4,1/4,1/4,0,1/4,0,
           0,0,0,0,0,0,0,0,0,0)
 conSy = c(1,0,0,0,1/4,1/4,1/4,0,1/4,0,
           1,0,0,0,1/4,1/4,1/4,0,1/4,0)
@@ -179,101 +569,112 @@ conZne = c(0,0,0,0,0,0,0,0,0,0,
 resTvSe = results(ddsTvS, contrast = conTvSe, cooksCutoff=FALSE)
 resTvSedf = as.data.frame(resTvSe@listData)
 rownames(resTvSedf) = resTvSe@rownames
+
 resInte = results(ddsTvS, contrast = conInte, cooksCutoff=FALSE)
 resIntedf = as.data.frame(resInte@listData)
 rownames(resIntedf) = resInte@rownames
+
 resZne = results(ddsTvS, contrast = conZne, cooksCutoff=FALSE)
 resZnedf = as.data.frame(resZne@listData)
 rownames(resZnedf) = resZne@rownames
+
 resTzn = results(ddsTvS, contrast = conTzn, cooksCutoff=FALSE)
 resTzndf = as.data.frame(resTzn@listData)
 rownames(resTzndf) = resTzn@rownames
+
 resSzn = results(ddsTvS, contrast = conSzn, cooksCutoff=FALSE)
 resSzndf = as.data.frame(resSzn@listData)
 rownames(resSzndf) = resSzn@rownames
 
-# count tables
+# count tables for all DEGs in contrasts
 thresholdj = resZne$padj < padj.cutoff
 resZne$thresholdj = thresholdj
 sigZnetot = data.frame(subset(resZne, thresholdj==TRUE))
 norm_sigZnetot = as.matrix(normalized_countsTvS[rownames(sigZnetot),])
 DEGZnetot = rownames(norm_sigZnetot)
+
 thresholdj = resTvSe$padj < padj.cutoff
 resTvSe$thresholdj = thresholdj
 sigTvSetot = data.frame(subset(resTvSe, thresholdj==TRUE))
 norm_sigTvSetot = as.matrix(normalized_countsTvS[rownames(sigTvSetot),])
 DEGTvSetot = rownames(norm_sigTvSetot)
+
 thresholdj = resInte$padj < padj.cutoff
 resInte$thresholdj = thresholdj
 sigIntetot = data.frame(subset(resInte, thresholdj==TRUE))
 norm_sigIntetot = as.matrix(normalized_countsTvS[rownames(sigIntetot),])
 DEGIntetot = rownames(norm_sigIntetot)
+
 thresholdj = resTzn$padj < padj.cutoff
 resTzn$thresholdj = thresholdj
 sigTzntot = data.frame(subset(resTzn, thresholdj==TRUE))
 norm_sigTzntot = as.matrix(normalized_countsTvS[rownames(sigTzntot),])
 DEGTzntot = rownames(norm_sigTzntot)
+
 thresholdj = resSzn$padj < padj.cutoff
 resSzn$thresholdj = thresholdj
 sigSzntot = data.frame(subset(resSzn, thresholdj==TRUE))
 norm_sigSzntot = as.matrix(normalized_countsTvS[rownames(sigSzntot),])
 DEGSzntot = rownames(norm_sigSzntot)
 
+# count tables for DEGs lfc > 1 in 3 contrasts
 thresholdj = resTvSe$padj < padj.cutoff & abs(resTvSe$log2FoldChange) > lfc.cutoff
 resTvSe$thresholdj = thresholdj
 sigTvSe = data.frame(subset(resTvSe, thresholdj==TRUE))
 norm_sigTvSe = as.matrix(normalized_countsTvS[rownames(sigTvSe),])
 DEGTvSe = rownames(norm_sigTvSe)
+
 thresholdj = resInte$padj < padj.cutoff & abs(resInte$log2FoldChange) > lfc.cutoff
 resInte$thresholdj = thresholdj
 sigInte = data.frame(subset(resInte, thresholdj==TRUE))
 norm_sigInte = as.matrix(normalized_countsTvS[rownames(sigInte),])
 DEGInte = rownames(norm_sigInte)
+
 thresholdj = resZne$padj < padj.cutoff & abs(resZne$log2FoldChange) > lfc.cutoff
 resZne$thresholdj = thresholdj
 sigZne = data.frame(subset(resZne, thresholdj==TRUE))
 norm_sigZne = as.matrix(normalized_countsTvS[rownames(sigZne),])
 DEGZne = rownames(norm_sigZne)
 
-# all DEGs
+# summary table with all DEGs from count tables above
 DEGa = unique(c(DEGZnetot,DEGTvSetot,DEGIntetot))
-# write.table(DEGa, "DEGall.txt", row.names = F, col.names = F)
+# write.table(DEGa, "~/SluteusRNA/Tables/DEGall.txt", row.names = F, col.names = F)
 DEGa1 = unique(c(DEGZne,DEGTvSe,DEGInte))
-# write.table(DEGa1, "DEGall1.txt", row.names = F, col.names = F)
+# write.table(DEGa1, "~/SluteusRNA/Tables/DEGall1.txt", row.names = F, col.names = F)
 
-# Volcano plots
+# Volcano plots based on model groups (Zn, Tvs, and Int)
 VolZne = EnhancedVolcano(data.frame(resZne), lab = rownames(resZne), x = 'log2FoldChange', y = 'padj',
   xlab = bquote(~Log[2]~ 'fold change'), ylab = bquote(~-Log[10]~adjusted~italic(P)),
   pCutoff = padj.cutoff, FCcutoff = lfc.cutoff, pointSize = 1.0, labSize = 2.0,
   title = "Volcano plot", subtitle = "Zn treatment")
-# ggsave("VolZne.png", width = 9, height = 7)
+# ggsave("~/SluteusRNA/Figures/VolZne.png", width = 9, height = 7)
 VolTvSe = EnhancedVolcano(data.frame(resTvSe), lab = rownames(resTvSe), x = 'log2FoldChange', y = 'padj',
   xlab = bquote(~Log[2]~ 'fold change'), ylab = bquote(~-Log[10]~adjusted~italic(P)),
   pCutoff = padj.cutoff, FCcutoff = lfc.cutoff, pointSize = 1.0, labSize = 2.0,
   title = "Volcano plot", subtitle = "Tolerant vs Sensitive")
-# ggsave("VolTvSe.png", width = 9, height = 7)
+# ggsave("~/SluteusRNA/Figures/VolTvSe.png", width = 9, height = 7)
 VolInte = EnhancedVolcano(data.frame(resInte), lab = rownames(resInte), x = 'log2FoldChange', y = 'padj',
   xlab = bquote(~Log[2]~ 'fold change'), ylab = bquote(~-Log[10]~adjusted~italic(P)),
   pCutoff = padj.cutoff, FCcutoff = lfc.cutoff, pointSize = 1.0, labSize = 2.0,
   title = "Volcano plot", subtitle = "Interaction")
-# ggsave("VolInte.png", width = 9, height = 7)
+# ggsave("~/SluteusRNA/Figures/VolInte.png", width = 9, height = 7)
 
 VolTvSe
 VolInte
 VolZne
 
-# venn with DEG proteins TvS
+# venn diagram with all DEG proteins (Sup Figure 1)
 colors1 = brewer.pal(3, "YlOrRd")
 venn.diagram(x = list(DEGZnetot,DEGTvSetot,DEGIntetot),
-    category.names = c("Zn vs nZn (124)" , "TvSe (6709)" , "Interaction (4098)"),
-    filename = "vennmainintetot.png",
+    category.names = c("Zinc (124)" , "TvS (6710)" , "Interaction (123)"),
+    filename = "vennmaintot.png",
     imagetype="png" ,
     col = c(colors1[1],colors1[2],colors1[3]) ,
     fill = c(alpha(colors1[1],0.3),alpha(colors1[2],0.3),alpha(colors1[3],0.3))
 )
 
 # DEG summary plot (Figure 3)
-DEGsum = as.data.frame(matrix(data = c(c(4250, 50, 4098),c("Tolerance","Zn treatment","Tolerance x\nZn treatment")), nrow = 3, ncol = 2))
+DEGsum = as.data.frame(matrix(data = c(c(6600, 51, 123),c("Tolerance","Zn treatment","Tolerance x\nZn treatment")), nrow = 3, ncol = 2))
 colnames(DEGsum) = c("val","name")
 DEGsum$val = as.numeric(DEGsum$val)
 DEGsum$name = factor(DEGsum$name, levels = c("Tolerance","Zn treatment","Tolerance x\nZn treatment"))
@@ -281,20 +682,21 @@ DEGsum$name = factor(DEGsum$name, levels = c("Tolerance","Zn treatment","Toleran
 ggplot(DEGsum, aes(name, val)) +
   geom_col() + theme_half_open() +
   geom_text(aes(label = val), nudge_y = 150) + 
-  scale_y_continuous(limits = c(0,4500)) +
+  scale_y_continuous(limits = c(0,6800)) +
   ylab("# of Significantly DE Genes") +
   theme(axis.title.x = element_blank())
-# ggsave("DEGsumplot.png", width = 5, height = 6)
+# ggsave("~/SluteusRNA/Figure/DEGsumplot.png", width = 5, height = 6)
 
-# DEG lists for ClueGO
-# write.table(DEGZne, file = "DEGZne.txt", row.names = F, col.names = F)
-# write.table(DEGTvSe, file = "DEGTvSe.txt", row.names = F, col.names = F)
-# write.table(DEGInte, file = "DEGInte.txt", row.names = F, col.names = F)
+# DEG lists for ClueGO analysis
+# write.table(DEGZne, file = "~/SluteusRNA/Tables/DEGZne.txt", row.names = F, col.names = F)
+# write.table(DEGTvSe, file = "~/SluteusRNA/Tables/DEGTvSe.txt", row.names = F, col.names = F)
+# write.table(DEGInte, file = "~/SluteusRNA/Tables/DEGInte.txt", row.names = F, col.names = F)
 
 ```
 
-# gene categories
 ```{r gene categories}
+# analyses for Table 1
+
 # fix rownames
 for (x in 1:nrow(resZnedf)) {
   hold = unlist(strsplit(rownames(resZnedf)[x], split = "u"))[3]
@@ -313,7 +715,7 @@ resZnedf$proteinID = rownames(resZnedf)
 resTzndf$proteinID = rownames(resZnedf)
 resSzndf$proteinID = rownames(resZnedf)
 
-# zn transporters
+# previous zn transporters
 zntrns = c("2764984","2846331","2854961","2859797","1739397","2856429","2893674","810602","72605")
 
 zntrnszne = resZnedf[resZnedf$proteinID %in% zntrns,]
@@ -322,13 +724,13 @@ zntrnsInte = resIntedf[resIntedf$proteinID %in% zntrns,]
 zntrnsTzn = resTzndf[resTzndf$proteinID %in% zntrns,]
 zntrnsSzn = resSzndf[resSzndf$proteinID %in% zntrns,]
 
-# write.csv(zntrnszne, file = "zntrnszne.csv")
-# write.csv(zntrnsTvSe, file = "zntrnsTvSe.csv")
-# write.csv(zntrnsInte, file = "zntrnsInte.csv")
-# write.csv(zntrnsTzn, file = "zntrnsTzn.csv")
-# write.csv(zntrnsSzn, file = "zntrnsSzn.csv")
+# write.csv(zntrnszne, file = "~/SluteusRNA/Tables/zntrnszne.csv")
+# write.csv(zntrnsTvSe, file = "~/SluteusRNA/Tables/zntrnsTvSe.csv")
+# write.csv(zntrnsInte, file = "~/SluteusRNA/Tables/zntrnsInte.csv")
+# write.csv(zntrnsTzn, file = "~/SluteusRNA/Tables/zntrnsTzn.csv")
+# write.csv(zntrnsSzn, file = "~/SluteusRNA/Tables/zntrnsSzn.csv")
 
-# annas table
+# previous candidate genes
 annast = c("2921934","2898571","2861746","2848300","2854576","2861857","2852980","2921647","2849043","2623337","2722447","83946")
 
 annastzne = resZnedf[resZnedf$proteinID %in% annast,]
@@ -337,38 +739,440 @@ annastInte = resIntedf[resIntedf$proteinID %in% annast,]
 annastTzn = resTzndf[resTzndf$proteinID %in% annast,]
 annastSzn = resSzndf[resSzndf$proteinID %in% annast,]
 
-# write.csv(annastzne, file = "annastzne.csv")
-# write.csv(annastTvSe, file = "annastTvSe.csv")
-# write.csv(annastInte, file = "annastInte.csv")
-# write.csv(annastTzn, file = "annastTzn.csv")
-# write.csv(annastSzn, file = "annastSzn.csv")
-
-# PDRs
-pdrs = c("2866415", "2866417", "2920252")
-
-pdrszne = resZnedf[resZnedf$proteinID %in% pdrs,]
-pdrsTvSe = resTvSedf[resTvSedf$proteinID %in% pdrs,]
-pdrsInte = resIntedf[resIntedf$proteinID %in% pdrs,]
-pdrsTzn = resTzndf[resTzndf$proteinID %in% pdrs,]
-pdrsSzn = resSzndf[resSzndf$proteinID %in% pdrs,]
-
-# fungal hydrophobins
-funhydro = c("2807124", "2849092", "2854866", "2854868", "2921554", "2921556", "2921647")
-
-funhydrozne = resZnedf[resZnedf$proteinID %in% funhydro,]
-funhydroTvSe = resTvSedf[resTvSedf$proteinID %in% funhydro,]
-funhydroInte = resIntedf[resIntedf$proteinID %in% funhydro,]
-funhydroTzn = resTzndf[resTzndf$proteinID %in% funhydro,]
-funhydroSzn = resSzndf[resSzndf$proteinID %in% funhydro,]
-
-# MAPks
-MAPKtab <- read_csv("11551948259379302.csv")
-mapks = as.character(MAPKtab$`Protein Id`)
-
-mapkszne = resZnedf[resZnedf$proteinID %in% mapks,]
-mapksTvSe = resTvSedf[resTvSedf$proteinID %in% mapks,]
-mapksInte = resIntedf[resIntedf$proteinID %in% mapks,]
-mapksTzn = resTzndf[resTzndf$proteinID %in% mapks,]
-mapksSzn = resSzndf[resSzndf$proteinID %in% mapks,]
+# write.csv(annastzne, file = "~/SluteusRNA/Tables/annastzne.csv")
+# write.csv(annastTvSe, file = "~/SluteusRNA/Tables/annastTvSe.csv")
+# write.csv(annastInte, file = "~/SluteusRNA/Tables/annastInte.csv")
+# write.csv(annastTzn, file = "~/SluteusRNA/Tables/annastTzn.csv")
+# write.csv(annastSzn, file = "~/SluteusRNA/Tables/annastSzn.csv")
 ```
 
+```{r WCGNA}
+# WCGNA analyses
+
+# detect outlier samples - hierarchical clustering - method 1
+htree <- hclust(dist(t(countDataj)), method = "average")
+plot(htree)
+
+
+# pca - method 2
+pca <- prcomp(t(countDataj))
+pca.dat <- pca$x
+
+pca.var <- pca$sdev^2
+pca.var.percent <- round(pca.var/sum(pca.var)*100, digits = 2)
+
+pca.dat <- as.data.frame(pca.dat)
+
+ggplot(pca.dat, aes(PC1, PC2)) +
+  geom_point() +
+  geom_text(label = rownames(pca.dat)) +
+  labs(x = paste0('PC1: ', pca.var.percent[1], ' %'),
+       y = paste0('PC2: ', pca.var.percent[2], ' %'))
+
+# indicates we should remove HZHCP and HZHCN too
+
+# remove low quality samples
+remsamp2 <- c("HZHCP", "HZHCN") # from PCA/Dendo
+sampleDataEC = sampleDataEC[!(sampleDataEC$libraryName %in% remsamp2),]
+countDataj = countDataj[,!names(countDataj) %in% remsamp2]
+
+## run outlier detection again to see if its better
+# detect outlier samples - hierarchical clustering - method 1
+htree <- hclust(dist(t(countDataj)), method = "average")
+plot(htree)
+
+
+# pca - method 2
+
+pca <- prcomp(t(countDataj))
+pca.dat <- pca$x
+
+pca.var <- pca$sdev^2
+pca.var.percent <- round(pca.var/sum(pca.var)*100, digits = 2)
+
+pca.dat <- as.data.frame(pca.dat)
+
+ggplot(pca.dat, aes(PC1, PC2)) +
+  geom_point() +
+  geom_text(label = rownames(pca.dat)) +
+  labs(x = paste0('PC1: ', pca.var.percent[1], ' %'),
+       y = paste0('PC2: ', pca.var.percent[2], ' %'))
+
+
+# create dds object (deseq)
+dds <- DESeqDataSetFromMatrix(countData = countDataj, 
+                              colData = sampleDataEC,
+                              design = ~1) # not specifying model
+
+# remove all genes with <15 count in more than 75% of samples (55*0.75=41.25)
+# recommended by WGCNA on RNAseq FAQ
+
+dds75 <- dds[rowSums(counts(dds) >= 15) >= 42,]
+nrow(dds75) # 10309 genes
+
+
+# perform variance stabilization
+dds_norm <- vst(dds75)
+
+
+# get normalized counts
+norm.counts <- assay(dds_norm) 
+
+# needs to be transposed for WGCNA analysis
+norm.counts <- norm.counts %>%
+  t()
+
+
+# WGCNA
+
+# Network construction
+# Choose a set of soft-thresholding powers
+power <- c(c(1:10), seq(from = 12, to = 50, by = 2))
+
+# Call the network topology analysis function
+sft <- pickSoftThreshold(norm.counts,
+                         powerVector = power,
+                         networkType = "signed",
+                         verbose = 5)
+
+
+sft.data <- sft$fitIndices
+
+# visualization to pick power
+
+a1 <- ggplot(sft.data, aes(Power, SFT.R.sq, label = Power)) +
+  geom_point() +
+  geom_text(nudge_y = 0.1) +
+  geom_hline(yintercept = 0.8, color = 'red') +
+  labs(x = 'Power', y = 'Scale free topology model fit, signed R^2') +
+  theme_classic()
+# here y intercept is 0.8 and we want to choose a power that has an R2 of above 0.8 
+# ie above the line (but not excessively large)
+
+a2 <- ggplot(sft.data, aes(Power, mean.k., label = Power)) +
+  geom_point() +
+  geom_text(nudge_y = 0.1) +
+  labs(x = 'Power', y = 'Mean Connectivity') +
+  theme_classic()
+# we want a power with minimal mean connectivity
+
+# look at both graphs at once to decide which power to choose
+grid.arrange(a1, a2, nrow = 2)
+# from this we will choose power of 16 for our soft threshold
+
+# convert matrix to numeric
+norm.counts[] <- sapply(norm.counts, as.numeric)
+
+soft_power <- 16 # from above
+temp_cor <- cor
+cor <- WGCNA::cor
+
+# memory estimate w.r.t blocksize
+bwnet <- blockwiseModules(norm.counts,
+                          maxBlockSize = 10500, # 10309 genes in our dds
+                          TOMType = "signed",
+                          power = soft_power,
+                          mergeCutHeight = 0.25, 
+                          numericLabels = FALSE,
+                          randomSeed = 1916,
+                          verbose = 3)
+
+
+cor <- temp_cor
+
+moduleLabels <- bwnet$colors
+moduleColors <- labels2colors(bwnet$colors)
+MEs <- bwnet$MEs
+geneTree <- bwnet$dendrograms[[1]]
+
+
+#plots the gene dendrogram with the module colors
+plotDendroAndColors(geneTree, moduleLabels,"Module",
+                    dendroLabels = FALSE, hang = 0.03,
+                    addGuide = TRUE, guideHang = 0.05,
+                    main = "Gene dendrogram and module colors")
+
+
+#gives table with numbers of genes in each module
+# and plots it 
+table(moduleLabels)
+moduleColData <- as.data.frame(table(moduleLabels))
+
+ggplot(data = moduleColData,
+       aes(x = moduleLabels, y = Freq, 
+           group = moduleLabels, fill = moduleLabels)) +
+  geom_bar(stat = "identity", color = "black", show.legend = F) +
+  scale_y_log10() +
+  theme(axis.text.x = element_text(angle = 45, hjust = 1)) +
+  scale_fill_manual(values = c("black", "blue", "brown", "cyan",         
+                      "darkred", "green",
+                       "greenyellow", "grey", "grey60", "lightcyan",
+                       "lightgreen", "lightyellow", "magenta",
+                       "midnightblue", "pink", "purple", "red",
+                       "royalblue", "salmon", "tan", 
+                       "turquoise", "yellow"))
+
+
+## Define numbers of genes and samples
+nGenes = ncol(norm.counts)
+nSamples = nrow(norm.counts)
+
+
+# make the Zn trait data binary 
+sampleDataEC <- sampleDataEC %>% 
+  mutate(zn_bin = ifelse(grepl('nZn', znID), 1, 0))
+
+# select out only Zn binary trait data and EC50 trait data
+sampleDataECforheatmap <- sampleDataEC %>% dplyr::select(zn_bin, EC50)
+
+
+## Recalculate MEs with color labels
+MEs0 <- moduleEigengenes(norm.counts, moduleLabels)$eigengenes
+MEs <- orderMEs(MEs0)
+moduleTraitCor <- cor(MEs, sampleDataECforheatmap, use = "p")
+moduleTraitPvalue <- corPvalueStudent(moduleTraitCor, nSamples)
+
+# The function “plotEigengeneNetworks” creates a heatmap of adjacencies 
+# among eigengenes and a dendrogram for their relationship
+plotEigengeneNetworks(MEs, "", marDendro = c(0,4,1,2), marHeatmap = c(3,4,1,2))
+
+sizeGrWindow(10,6)
+
+## Will display correlations and their p-values
+textMatrix <-  paste(signif(moduleTraitCor, 2), "\n(",
+                    signif(moduleTraitPvalue, 1), ")", sep = "")
+dim(textMatrix) <- dim(moduleTraitCor)
+par(mar = c(6, 8.5, 3, 3))
+
+## Display the correlation values within a heatmap plot
+labeledHeatmap(Matrix = moduleTraitCor,
+               xLabels = names(sampleDataECforheatmap),
+               yLabels = names(MEs),
+               ySymbols = names(MEs),
+               colorLabels = FALSE,
+               colors = blueWhiteRed(50),
+               textMatrix = textMatrix,
+               setStdMargins = FALSE,
+               cex.text = 0.5,
+               zlim = c(-1,1),
+               main = paste("Module-trait relationships"))
+
+
+#If this is positive/negative, it means the trait increases/decreases
+# with increasing eigengene "expression".
+
+#If this correlation is strong and the network is signed (or signed hybrid)  
+#it means that most of the genes in the module will also exhibit a correlation 
+#with the trait of the same sign as the eigengene.
+
+
+
+# Define variable EC50 containing the EC50 column of the sample data file
+EC50 <- as.data.frame(sampleDataEC$EC50)
+names(EC50) <- "EC50"
+
+modNames <- substring(names(MEs), 3) #extract module names
+
+#Calculate the module membership and the associated p-values
+geneModuleMembership <- as.data.frame(cor(norm.counts, MEs, use = "p"))
+MMPvalue <- as.data.frame(corPvalueStudent(as.matrix(geneModuleMembership), nSamples))
+names(geneModuleMembership) <- paste("MM", modNames, sep="")
+names(MMPvalue) <- paste("p.MM", modNames, sep="")
+
+#Calculate the gene significance and associated p-values
+## this one for EC50
+geneTraitSignificanceEC50 <- as.data.frame(cor(norm.counts, EC50, use = "p"))
+GSPvalueEC <- as.data.frame(corPvalueStudent(as.matrix(geneTraitSignificanceEC50), nSamples))
+names(geneTraitSignificanceEC50) <- paste("GS.", names(EC50), sep="")
+names(GSPvalueEC) <- paste("p.GS.", names(EC50), sep="")
+head(GSPvalueEC)
+
+## this one for zn treatment
+# Define variable Zn treatment containing the zn treatment column of the sample data file
+Zn <- as.data.frame(sampleDataEC$zn_bin)
+names(Zn) <- "Zn"
+geneTraitSignificanceZn <- as.data.frame(cor(norm.counts, Zn, use = "p"))
+GSPvalueZn <- as.data.frame(corPvalueStudent(as.matrix(geneTraitSignificanceZn), nSamples))
+names(geneTraitSignificanceZn) <- paste("GS.", names(Zn), sep="")
+names(GSPvalueZn) <- paste("p.GS.", names(Zn), sep="")
+head(GSPvalueZn)
+
+# Make a graph of module membership vs trait p value to highlight important genes
+
+module <- "lightcyan" #changes with what module you want to look at
+
+column <- match(module, modNames)
+moduleGenes <- moduleLabels==module
+verboseScatterplot(abs(geneModuleMembership[moduleGenes, column]),
+                   abs(geneTraitSignificanceEC50[moduleGenes,1]), # changes depending on trait
+                   xlab = paste("Module Membership in", module, "module"),
+                   ylab = "Gene significance in Zn treatment",
+                   main = paste("Module membership vs. gene significance\n"),
+                   cex.main = 1.2, cex.lab = 1.2, cex.axis = 1.2, col = module)
+
+geneModuleMembership[moduleGenes, column]
+genes.pvals.EC <- tibble::rownames_to_column(GSPvalueEC, "gene")
+
+#get number of genes in a single module
+count(moduleGenes)
+moduleGenes
+#get number of genes in each module
+table(moduleLabels)
+
+## If the genes are positively correlated and signifiantly correlated -  indicates that the genes that are highly significantly associated with the trait (high gene significance) are also the genes that are the most connected within their module (high module membership). Therefore genes in module could be potential target genes when looking at the trait.
+
+## gene modules to investigate for EC50 == salmon, turquoise, red
+
+# output the list of genes in a module, as well as the GS p value for trait
+# This is the gene significance to the trait p value
+# transform p values -log10 = higher = more significant
+genes.pvals.EC <- tibble::rownames_to_column(GSPvalueEC, "gene")
+genes.pvals.EC$rank <- -log10(genes.pvals.EC$p.GS.EC50)
+
+# these 4 were sig correlated MM and GS
+lightgreenECrank <- genes.pvals.EC[moduleLabels=="lightgreen",] %>%
+  arrange(,rank, desc(rank))
+
+magentaECrank <- genes.pvals.EC[moduleLabels=="magenta",] %>%
+  arrange(,rank, desc(rank))
+
+greenECrank <- genes.pvals.EC[moduleLabels=="green",] %>%
+  arrange(,rank, desc(rank))
+
+blackECrank <- genes.pvals.EC[moduleLabels=="black",] %>%
+  arrange(,rank, desc(rank))
+
+# output the list of genes in a module, as well as the GS p value for trait
+# This is the gene significance to the trait p value
+genes.pvals.Zn <- tibble::rownames_to_column(GSPvalueZn, "gene")
+genes.pvals.Zn$rank <- -log10(genes.pvals.Zn$p.GS.Zn)
+
+midnightblueZnrank <- genes.pvals.Zn[moduleLabels=="midnightblue",] %>%
+  arrange(,rank, desc(rank))
+
+turquoiseZnrank <- genes.pvals.Zn[moduleLabels=="turquoise",] %>%
+  arrange(,p.GS.Zn)
+
+# format gene names to match gmt for GSEA 
+
+lightgreenECrank$gene <- gsub("jgi.p\\|Suilu4\\|", "\\", lightgreenECrank$gene)
+magentaECrank$gene <- gsub("jgi.p\\|Suilu4\\|", "\\", magentaECrank$gene)
+greenECrank$gene <- gsub("jgi.p\\|Suilu4\\|", "\\", greenECrank$gene)
+blackECrank$gene <- gsub("jgi.p\\|Suilu4\\|", "\\", blackECrank$gene)
+midnightblueZnrank$gene <- gsub("jgi.p\\|Suilu4\\|", "\\", midnightblueZnrank$gene)
+turquoiseZnrank$gene <- gsub("jgi.p\\|Suilu4\\|", "\\", turquoiseZnrank$gene)
+
+## output the rank lists as cvs for GSEA 
+write.csv(lightgreenECrank, "modulesforGSEA/lightgreenECrank.csv") 
+write.csv(magentaECrank, "modulesforGSEA/magentaECrank.csv") 
+write.csv(greenECrank, "modulesforGSEA/greenECrank.csv") 
+write.csv(blackECrank, "modulesforGSEA/blackECrank.csv") 
+write.csv(midnightblueZnrank, "modulesforGSEA/midnightblueZnrank.csv") 
+write.csv(turquoiseZnrank, "modulesforGSEA/turquoiseZnrank.csv") 
+
+
+### GO ANALYSIS ON MODULES
+# read the GO mapping file - contains which GO terms relate to which genes
+gene_to_go_mapping <- readMappings(file = "~/Desktop/Branco Lab/Results/SluteusRNA/gene_to_GO.txt", 
+                                   sep = "\t", IDsep = ",")
+
+## input for GO analysis ## NEEDS CHANGED DEPENDING ON WHAT YOURE LOOKING AT
+ECgenes <- read.csv("modulesforGSEA/midnightblueZnrank.csv", header = T)
+
+# first, get only the name and the p value - change if looking at Zn or EC trait
+deGenes_Universe <- ECgenes %>%
+  dplyr::select(gene, p.GS.Zn)
+
+# sort by the membership value (in descending order)
+deGenes_Universe <- deGenes_Universe[order(-deGenes_Universe$p.GS.Zn), ]
+
+# convert to topGO's genelist format
+topgoUniverse <- deGenes_Universe$p.GS.Zn
+names(topgoUniverse) <- deGenes_Universe$gene
+topgoUniverse <- na.omit(topgoUniverse)
+
+# Gene Selection needs to run off a function 
+# This function returns the genes with p value under 0.05
+# only selecting genes that have significant p values for the trait
+topDiffGenes <- function(allScore) {
+  return(allScore < 0.05)
+}
+
+# This is where we create the topGO object
+# This needs to be repeated with each GO Term category
+## CHANGE TO LOOK AT DIFFERENT THINGS
+# Molecular Function  = "MF"
+# Cellular Component = "CC"
+# Biological Pathway = "BP"
+my_go_dataMF <- new("topGOdata",
+                    ontology    = "BP",
+                    geneSel     = topDiffGenes, # this needs to be a function
+                    allGenes    = topgoUniverse, # this is all the genes in the expt
+                    gene2GO     = gene_to_go_mapping,
+                    annot       = annFUN.gene2GO,
+                    nodeSize    =5) # Modify to reduce/increase stringency.
+
+
+my_go_dataMF
+resultKS <- runTest(my_go_dataMF, algorithm = "classic", statistic = "ks")
+resultKS
+tabKS <- GenTable(my_go_dataMF, raw.p.value = resultKS, topNodes = length(resultKS@score),
+                  numChar = 120)
+tabKS$sig <- ifelse(tabKS$raw.p.value <= 0.05, "yes", "no")
+tabKS$raw.p.value <- as.numeric(tabKS$raw.p.value)
+tabKS
+
+##write results to csv - change if needed!
+write_csv(tabKS, "MFmidnightblue.csv")
+  
+
+
+### INTRAMODULAR ANALYSIS
+
+# have list of genes significantly correlated with Zn treatment from above
+GSPvalueZn %>% 
+  head(25)
+
+# use this to create a pre-ranked list based on -log10 p val to to GSEA
+
+forGSEAZn <- tibble::rownames_to_column(GSPvalueZn, "gene")
+colnames(forGSEAZn) <- c("gene","p.val")
+head(forGSEAZn, 2)
+
+forGSEAZn$gene <- gsub("jgi.p\\|Suilu4\\|", "\\", forGSEAZn$gene)
+
+forGSEAZn$rank <- -log10(forGSEAZn$p.val)
+
+forGSEAZn <- arrange(forGSEAZn, desc(rank))
+head(forGSEAZn)
+write.csv(forGSEAZn, "Zn_treatment_correlated_genes.csv") 
+
+
+## Now for EC50 correlated genes
+GSPvalueEC %>% 
+  head(25)
+
+
+# Using the gene significance you can identify genes that have a 
+# high significance for trait of interest 
+
+# generate a list of genes based on pvalue - then -log10 p val 
+# create a pre-ranked list based on -log10 p val to to gsea
+
+forGSEAEC50 <- as.data.frame(GSPvalueEC)
+forGSEAEC50 <- tibble::rownames_to_column(forGSEAEC50, "gene")
+colnames(forGSEAEC50) <- c("gene","p.val")
+head(forGSEAEC50, 2)
+
+forGSEAEC50$gene <- gsub("jgi.p\\|Suilu4\\|", "\\", forGSEAEC50$gene)
+
+forGSEAEC50$rank <- -log10(forGSEAEC50$p.val)
+
+forGSEAEC50 <- arrange(forGSEAEC50, desc(rank))
+head(forGSEAEC50)
+
+write.csv(forGSEAEC50, "EC50_correlated_genes.csv") 
+
+# perform GSEA preranked manually on GSEA GUI 
+
+```
