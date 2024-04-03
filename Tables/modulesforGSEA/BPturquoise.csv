@@ -1,0 +1,136 @@
+GO.ID,Term,Annotated,Significant,Expected,raw.p.value,sig
+GO:0034641,cellular nitrogen compound metabolic process,51,38,29.91,0.0027,yes
+GO:0006139,nucleobase-containing compound metabolic process,40,30,23.46,0.017,yes
+GO:0006725,cellular aromatic compound metabolic process,40,30,23.46,0.017,yes
+GO:0046483,heterocycle metabolic process,40,30,23.46,0.017,yes
+GO:1901360,organic cyclic compound metabolic process,40,30,23.46,0.017,yes
+GO:0090304,nucleic acid metabolic process,35,27,20.53,0.017,yes
+GO:0065007,biological regulation,32,20,18.77,0.0194,yes
+GO:0050789,regulation of biological process,29,19,17.01,0.0267,yes
+GO:0019222,regulation of metabolic process,27,17,15.83,0.0377,yes
+GO:0051171,regulation of nitrogen compound metabolic process,27,17,15.83,0.0377,yes
+GO:0060255,regulation of macromolecule metabolic process,27,17,15.83,0.0377,yes
+GO:0080090,regulation of primary metabolic process,27,17,15.83,0.0377,yes
+GO:0006259,DNA metabolic process,19,16,11.14,0.0474,yes
+GO:0071840,cellular component organization or biogenesis,6,5,3.52,0.05,no
+GO:0009987,cellular process,88,56,51.61,0.0551,no
+GO:0044260,cellular macromolecule metabolic process,33,25,19.35,0.0624,no
+GO:0006260,DNA replication,14,12,8.21,0.0833,no
+GO:0016567,protein ubiquitination,14,9,8.21,0.0833,no
+GO:0031396,regulation of protein ubiquitination,14,9,8.21,0.0833,no
+GO:0031398,positive regulation of protein ubiquitination,14,9,8.21,0.0833,no
+GO:0031399,regulation of protein modification process,14,9,8.21,0.0833,no
+GO:0031401,positive regulation of protein modification process,14,9,8.21,0.0833,no
+GO:0032446,protein modification by small protein conjugation,14,9,8.21,0.0833,no
+GO:0043085,positive regulation of catalytic activity,14,9,8.21,0.0833,no
+GO:0044093,positive regulation of molecular function,14,9,8.21,0.0833,no
+GO:0051247,positive regulation of protein metabolic process,14,9,8.21,0.0833,no
+GO:0051338,regulation of transferase activity,14,9,8.21,0.0833,no
+GO:0051347,positive regulation of transferase activity,14,9,8.21,0.0833,no
+GO:0051438,regulation of ubiquitin-protein transferase activity,14,9,8.21,0.0833,no
+GO:0051443,positive regulation of ubiquitin-protein transferase activity,14,9,8.21,0.0833,no
+GO:0070647,protein modification by small protein conjugation or removal,14,9,8.21,0.0833,no
+GO:1903320,regulation of protein modification by small protein conjugation or removal,14,9,8.21,0.0833,no
+GO:1903322,positive regulation of protein modification by small protein conjugation or removal,14,9,8.21,0.0833,no
+GO:0006412,translation,13,8,7.62,0.0875,no
+GO:0006518,peptide metabolic process,13,8,7.62,0.0875,no
+GO:0043043,peptide biosynthetic process,13,8,7.62,0.0875,no
+GO:0043603,cellular amide metabolic process,13,8,7.62,0.0875,no
+GO:0043604,amide biosynthetic process,13,8,7.62,0.0875,no
+GO:0050896,response to stimulus,10,8,5.86,0.0977,no
+GO:0051716,cellular response to stimulus,10,8,5.86,0.0977,no
+GO:0010467,gene expression,25,17,14.66,0.0987,no
+GO:0044237,cellular metabolic process,65,43,38.12,0.112,no
+GO:0016043,cellular component organization,5,4,2.93,0.1153,no
+GO:0071704,organic substance metabolic process,86,55,50.44,0.1229,no
+GO:0050794,regulation of cellular process,15,10,8.8,0.1287,no
+GO:0043170,macromolecule metabolic process,70,46,41.05,0.1294,no
+GO:0009893,positive regulation of metabolic process,15,9,8.8,0.1344,no
+GO:0010604,positive regulation of macromolecule metabolic process,15,9,8.8,0.1344,no
+GO:0048518,positive regulation of biological process,15,9,8.8,0.1344,no
+GO:0051173,positive regulation of nitrogen compound metabolic process,15,9,8.8,0.1344,no
+GO:0019219,regulation of nucleobase-containing compound metabolic process,12,8,7.04,0.1424,no
+GO:0044238,primary metabolic process,85,54,49.85,0.1483,no
+GO:0034645,cellular macromolecule biosynthetic process,14,9,8.21,0.1561,no
+GO:0009059,macromolecule biosynthetic process,24,16,14.08,0.1585,no
+GO:0036211,protein modification process,18,11,10.56,0.1624,no
+GO:0006974,cellular response to DNA damage stimulus,6,5,3.52,0.1784,no
+GO:0031323,regulation of cellular metabolic process,13,8,7.62,0.1907,no
+GO:0031397,negative regulation of protein ubiquitination,11,7,6.45,0.2003,no
+GO:0031400,negative regulation of protein modification process,11,7,6.45,0.2003,no
+GO:0043086,negative regulation of catalytic activity,11,7,6.45,0.2003,no
+GO:0044092,negative regulation of molecular function,11,7,6.45,0.2003,no
+GO:0051348,negative regulation of transferase activity,11,7,6.45,0.2003,no
+GO:0051444,negative regulation of ubiquitin-protein transferase activity,11,7,6.45,0.2003,no
+GO:1903321,negative regulation of protein modification by small protein conjugation or removal,11,7,6.45,0.2003,no
+GO:0050790,regulation of catalytic activity,16,9,9.38,0.2014,no
+GO:0051246,regulation of protein metabolic process,16,9,9.38,0.2014,no
+GO:0065009,regulation of molecular function,16,9,9.38,0.2014,no
+GO:0006807,nitrogen compound metabolic process,80,51,46.92,0.2176,no
+GO:0006351,DNA-templated transcription,10,7,5.86,0.236,no
+GO:0006355,regulation of DNA-templated transcription,10,7,5.86,0.236,no
+GO:0032774,RNA biosynthetic process,10,7,5.86,0.236,no
+GO:0097659,nucleic acid-templated transcription,10,7,5.86,0.236,no
+GO:1903506,regulation of nucleic acid-templated transcription,10,7,5.86,0.236,no
+GO:2001141,regulation of RNA biosynthetic process,10,7,5.86,0.236,no
+GO:0007154,cell communication,5,4,2.93,0.2538,no
+GO:0006281,DNA repair,5,4,2.93,0.3016,no
+GO:0043412,macromolecule modification,20,13,11.73,0.3093,no
+GO:0019538,protein metabolic process,39,21,22.87,0.3135,no
+GO:0051252,regulation of RNA metabolic process,11,7,6.45,0.3148,no
+GO:0044271,cellular nitrogen compound biosynthetic process,27,17,15.83,0.3207,no
+GO:0016070,RNA metabolic process,16,11,9.38,0.3524,no
+GO:0009889,regulation of biosynthetic process,12,7,7.04,0.3927,no
+GO:0010468,regulation of gene expression,12,7,7.04,0.3927,no
+GO:0010556,regulation of macromolecule biosynthetic process,12,7,7.04,0.3927,no
+GO:0031326,regulation of cellular biosynthetic process,12,7,7.04,0.3927,no
+GO:0006261,DNA-templated DNA replication,6,5,3.52,0.3997,no
+GO:0006270,DNA replication initiation,6,5,3.52,0.3997,no
+GO:0006950,response to stress,7,5,4.11,0.4177,no
+GO:0033554,cellular response to stress,7,5,4.11,0.4177,no
+GO:0009892,negative regulation of metabolic process,13,7,7.62,0.4215,no
+GO:0010605,negative regulation of macromolecule metabolic process,13,7,7.62,0.4215,no
+GO:0048519,negative regulation of biological process,13,7,7.62,0.4215,no
+GO:0051172,negative regulation of nitrogen compound metabolic process,13,7,7.62,0.4215,no
+GO:0051248,negative regulation of protein metabolic process,13,7,7.62,0.4215,no
+GO:0018130,heterocycle biosynthetic process,13,8,7.62,0.4687,no
+GO:0019438,aromatic compound biosynthetic process,13,8,7.62,0.4687,no
+GO:0034654,nucleobase-containing compound biosynthetic process,13,8,7.62,0.4687,no
+GO:1901362,organic cyclic compound biosynthetic process,13,8,7.62,0.4687,no
+GO:1901566,organonitrogen compound biosynthetic process,20,11,11.73,0.5073,no
+GO:1901564,organonitrogen compound metabolic process,45,23,26.39,0.5532,no
+GO:0006457,protein folding,5,1,2.93,0.5674,no
+GO:0019637,organophosphate metabolic process,5,3,2.93,0.6121,no
+GO:0044249,cellular biosynthetic process,34,20,19.94,0.7213,no
+GO:1901576,organic substance biosynthetic process,34,20,19.94,0.7213,no
+GO:0009058,biosynthetic process,35,20,20.53,0.7781,no
+GO:0016053,organic acid biosynthetic process,5,1,2.93,0.7861,no
+GO:0044283,small molecule biosynthetic process,5,1,2.93,0.7861,no
+GO:0046394,carboxylic acid biosynthetic process,5,1,2.93,0.7861,no
+GO:0008152,metabolic process,101,60,59.23,0.7945,no
+GO:0006082,organic acid metabolic process,8,3,4.69,0.8465,no
+GO:0019752,carboxylic acid metabolic process,8,3,4.69,0.8465,no
+GO:0043436,oxoacid metabolic process,8,3,4.69,0.8465,no
+GO:0051179,localization,19,10,11.14,0.8578,no
+GO:0006520,cellular amino acid metabolic process,6,2,3.52,0.8721,no
+GO:0033036,macromolecule localization,9,4,5.28,0.8771,no
+GO:0008104,protein localization,8,3,4.69,0.8863,no
+GO:0051641,cellular localization,8,3,4.69,0.8863,no
+GO:0070727,cellular macromolecule localization,8,3,4.69,0.8863,no
+GO:0071702,organic substance transport,8,3,4.69,0.8863,no
+GO:0071705,nitrogen compound transport,8,3,4.69,0.8863,no
+GO:0006810,transport,18,9,10.56,0.8905,no
+GO:0051234,establishment of localization,18,9,10.56,0.8905,no
+GO:0006886,intracellular protein transport,7,2,4.11,0.8987,no
+GO:0015031,protein transport,7,2,4.11,0.8987,no
+GO:0045184,establishment of protein localization,7,2,4.11,0.8987,no
+GO:0046907,intracellular transport,7,2,4.11,0.8987,no
+GO:0051649,establishment of localization in cell,7,2,4.11,0.8987,no
+GO:0009056,catabolic process,5,1,2.93,0.9835,no
+GO:0009057,macromolecule catabolic process,5,1,2.93,0.9835,no
+GO:1901575,organic substance catabolic process,5,1,2.93,0.9835,no
+GO:0044281,small molecule metabolic process,12,4,7.04,0.9911,no
+GO:0006793,phosphorus metabolic process,8,3,4.69,0.9916,no
+GO:0006796,phosphate-containing compound metabolic process,8,3,4.69,0.9916,no
+GO:0008150,biological_process,133,78,78,1,no
+GO:0043687,post-translational protein modification,5,1,2.93,1,no

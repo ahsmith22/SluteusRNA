@@ -1073,14 +1073,14 @@ write.csv(turquoiseZnrank, "~/SluteusRNA/Tables/modulesforGSEA/turquoiseZnrank.c
 
 ### GO ANALYSIS ON MODULES
 # read the GO mapping file - contains which GO terms relate to which genes
-gene_to_go_mapping <- readMappings(file = "~/SluteusRNA/Data/gene_to_GO.txt", 
+gene_to_go_mapping <- readMappings(file = "~/Desktop/Branco Lab/Results/SluteusRNA/gene_to_GO.txt", 
                                    sep = "\t", IDsep = ",")
 
 ## input for GO analysis ## NEEDS CHANGED DEPENDING ON WHAT YOURE LOOKING AT
-ECgenes <- read.csv("~/SluteusRNA/Tables/modulesforGSEA/midnightblueZnrank.csv", header = T)
+Zngenes <- read.csv("~/SluteusRNA/Tables/modulesforGSEA/turquoiseZnrank.csv", header = T)
 
 # first, get only the name and the p value - change if looking at Zn or EC trait
-deGenes_Universe <- ECgenes %>%
+deGenes_Universe <- Zngenes %>%
   dplyr::select(gene, p.GS.Zn)
 
 # sort by the membership value (in descending order)
@@ -1100,12 +1100,11 @@ topDiffGenes <- function(allScore) {
 
 # This is where we create the topGO object
 # This needs to be repeated with each GO Term category
-## CHANGE TO LOOK AT DIFFERENT THINGS
 # Molecular Function  = "MF"
 # Cellular Component = "CC"
 # Biological Pathway = "BP"
 my_go_dataMF <- new("topGOdata",
-                    ontology    = "BP",
+                    ontology    = "MF",
                     geneSel     = topDiffGenes, # this needs to be a function
                     allGenes    = topgoUniverse, # this is all the genes in the expt
                     gene2GO     = gene_to_go_mapping,
@@ -1114,17 +1113,61 @@ my_go_dataMF <- new("topGOdata",
 
 
 my_go_dataMF
-resultKS <- runTest(my_go_dataMF, algorithm = "classic", statistic = "ks")
-resultKS
-tabKS <- GenTable(my_go_dataMF, raw.p.value = resultKS, topNodes = length(resultKS@score),
+resultKS.MF<- runTest(my_go_dataMF, algorithm = "classic", statistic = "ks")
+resultKS.MF
+tabKS.MF <- GenTable(my_go_dataMF, raw.p.value = resultKS.MF, topNodes = length(resultKS.MF@score),
                   numChar = 120)
-tabKS$sig <- ifelse(tabKS$raw.p.value <= 0.05, "yes", "no")
-tabKS$raw.p.value <- as.numeric(tabKS$raw.p.value)
-tabKS
+tabKS.MF$sig <- ifelse(tabKS.MF$raw.p.value <= 0.05, "yes", "no")
+tabKS.MF$raw.p.value <- as.numeric(tabKS.MF$raw.p.value)
+tabKS.MF
 
 ##write results to csv - change if needed!
-write_csv(tabKS, "~/SluteusRNA/Tables/MFmidnightblue.csv")
-  
+write_csv(tabKS.MF, "~/SluteusRNA/Tables/modulesforGSEA/MFturquoise.csv")
+
+## For BP
+my_go_dataBP <- new("topGOdata",
+                    ontology    = "BP",
+                    geneSel     = topDiffGenes, # this needs to be a function
+                    allGenes    = topgoUniverse, # this is all the genes in the expt
+                    gene2GO     = gene_to_go_mapping,
+                    annot       = annFUN.gene2GO,
+                    nodeSize    =5) # Modify to reduce/increase stringency.
+
+
+my_go_dataBP
+resultKS.BP <- runTest(my_go_dataBP, algorithm = "classic", statistic = "ks")
+resultKS.BP
+tabKS.BP <- GenTable(my_go_dataBP, raw.p.value = resultKS.BP, topNodes = length(resultKS.BP@score),
+                  numChar = 120)
+tabKS.BP$sig <- ifelse(tabKS.BP$raw.p.value <= 0.05, "yes", "no")
+tabKS.BP$raw.p.value <- as.numeric(tabKS.BP$raw.p.value)
+tabKS.BP
+
+##write results to csv - change if needed!
+write_csv(tabKS.BP, "~/SluteusRNA/Tables/modulesforGSEA/BPturquoise.csv")
+
+
+## For CC
+my_go_dataCC <- new("topGOdata",
+                    ontology    = "CC",
+                    geneSel     = topDiffGenes, # this needs to be a function
+                    allGenes    = topgoUniverse, # this is all the genes in the expt
+                    gene2GO     = gene_to_go_mapping,
+                    annot       = annFUN.gene2GO,
+                    nodeSize    =5) # Modify to reduce/increase stringency.
+
+
+my_go_dataCC
+resultKS.CC <- runTest(my_go_dataCC, algorithm = "classic", statistic = "ks")
+resultKS.CC
+tabKS.CC <- GenTable(my_go_dataCC, raw.p.value = resultKS.CC, topNodes = length(resultKS.CC@score),
+                  numChar = 120)
+tabKS.CC$sig <- ifelse(tabKS.CC$raw.p.value <= 0.05, "yes", "no")
+tabKS.CC$raw.p.value <- as.numeric(tabKS.CC$raw.p.value)
+tabKS.CC
+
+##write results to csv - change if needed!
+write_csv(tabKS.CC, "~/SluteusRNA/Tables/modulesforGSEA/CCturquoise.csv")
 
 
 ### INTRAMODULAR ANALYSIS
@@ -1145,7 +1188,7 @@ forGSEAZn$rank <- -log10(forGSEAZn$p.val)
 
 forGSEAZn <- arrange(forGSEAZn, desc(rank))
 head(forGSEAZn)
-write.csv(forGSEAZn, "~/SluteusRNA/Tables/Zn_treatment_correlated_genes.csv") 
+write.csv(forGSEAZn, "~/SluteusRNA/Tables/modulesforGSEA/Zn_treatment_correlated_genes.csv") 
 
 
 ## Now for EC50 correlated genes
@@ -1171,7 +1214,7 @@ forGSEAEC50$rank <- -log10(forGSEAEC50$p.val)
 forGSEAEC50 <- arrange(forGSEAEC50, desc(rank))
 head(forGSEAEC50)
 
-write.csv(forGSEAEC50, "~/SluteusRNA/Tables/EC50_correlated_genes.csv") 
+write.csv(forGSEAEC50, "~/SluteusRNA/Tables/modulesforGSEA/EC50_correlated_genes.csv") 
 
 # perform GSEA preranked manually on GSEA GUI 
 

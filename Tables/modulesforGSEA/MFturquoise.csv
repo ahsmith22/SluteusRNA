@@ -1,0 +1,72 @@
+GO.ID,Term,Annotated,Significant,Expected,raw.p.value,sig
+GO:0003735,structural constituent of ribosome,19,16,10.97,1.7e-4,yes
+GO:0005198,structural molecule activity,19,16,10.97,1.7e-4,yes
+GO:0030234,enzyme regulator activity,10,9,5.77,0.00335,yes
+GO:0098772,molecular function regulator activity,10,9,5.77,0.00335,yes
+GO:0016772,"transferase activity, transferring phosphorus-containing groups",33,25,19.06,0.00848,yes
+GO:0003676,nucleic acid binding,67,46,38.69,0.01148,yes
+GO:0016779,nucleotidyltransferase activity,9,8,5.2,0.01897,yes
+GO:0003887,DNA-directed DNA polymerase activity,5,5,2.89,0.02358,yes
+GO:0034061,DNA polymerase activity,5,5,2.89,0.02358,yes
+GO:0005488,binding,177,111,102.21,0.03225,yes
+GO:0030554,adenyl nucleotide binding,63,42,36.38,0.03606,yes
+GO:0032559,adenyl ribonucleotide binding,63,42,36.38,0.03606,yes
+GO:0004672,protein kinase activity,15,12,8.66,0.03681,yes
+GO:0004674,protein serine/threonine kinase activity,12,10,6.93,0.03933,yes
+GO:0097159,organic cyclic compound binding,127,82,73.34,0.04473,yes
+GO:1901363,heterocyclic compound binding,127,82,73.34,0.04473,yes
+GO:0140097,"catalytic activity, acting on DNA",13,11,7.51,0.05637,no
+GO:0005524,ATP binding,62,41,35.8,0.06043,no
+GO:0017076,purine nucleotide binding,67,44,38.69,0.07525,no
+GO:0032555,purine ribonucleotide binding,67,44,38.69,0.07525,no
+GO:0003677,DNA binding,43,30,24.83,0.07527,no
+GO:0016773,"phosphotransferase activity, alcohol group as acceptor",20,15,11.55,0.08833,no
+GO:0032553,ribonucleotide binding,69,45,39.85,0.10369,no
+GO:0097367,carbohydrate derivative binding,69,45,39.85,0.10369,no
+GO:0016301,kinase activity,22,16,12.7,0.1123,no
+GO:0035639,purine ribonucleoside triphosphate binding,66,43,38.11,0.11789,no
+GO:0000166,nucleotide binding,74,48,42.73,0.12995,no
+GO:0036094,small molecule binding,74,48,42.73,0.12995,no
+GO:1901265,nucleoside phosphate binding,74,48,42.73,0.12995,no
+GO:0003723,RNA binding,7,5,4.04,0.15026,no
+GO:0140640,"catalytic activity, acting on a nucleic acid",31,21,17.9,0.15515,no
+GO:0043167,ion binding,84,54,48.51,0.15969,no
+GO:0017111,ribonucleoside triphosphate phosphatase activity,13,6,7.51,0.17707,no
+GO:0043168,anion binding,69,44,39.85,0.17988,no
+GO:0140657,ATP-dependent activity,21,13,12.13,0.19636,no
+GO:0015399,primary active transmembrane transporter activity,6,3,3.46,0.22402,no
+GO:0022804,active transmembrane transporter activity,6,3,3.46,0.22402,no
+GO:0042626,ATPase-coupled transmembrane transporter activity,6,3,3.46,0.22402,no
+GO:0003899,DNA-directed 5'-3' RNA polymerase activity,5,4,2.89,0.23164,no
+GO:0034062,5'-3' RNA polymerase activity,5,4,2.89,0.23164,no
+GO:0097747,RNA polymerase activity,5,4,2.89,0.23164,no
+GO:0008094,"ATP-dependent activity, acting on DNA",6,5,3.46,0.27095,no
+GO:0008270,zinc ion binding,11,8,6.35,0.27344,no
+GO:0004386,helicase activity,15,9,8.66,0.30494,no
+GO:0016462,pyrophosphatase activity,15,8,8.66,0.32267,no
+GO:0016817,"hydrolase activity, acting on acid anhydrides",15,8,8.66,0.32267,no
+GO:0016818,"hydrolase activity, acting on acid anhydrides, in phosphorus-containing anhydrides",15,8,8.66,0.32267,no
+GO:0005215,transporter activity,8,5,4.62,0.32467,no
+GO:0022857,transmembrane transporter activity,8,5,4.62,0.32467,no
+GO:0016788,"hydrolase activity, acting on ester bonds",13,8,7.51,0.32676,no
+GO:0016491,oxidoreductase activity,10,7,5.77,0.40203,no
+GO:0004518,nuclease activity,5,3,2.89,0.41343,no
+GO:0016791,phosphatase activity,8,5,4.62,0.41555,no
+GO:0042578,phosphoric ester hydrolase activity,8,5,4.62,0.41555,no
+GO:0016740,transferase activity,56,34,32.34,0.42824,no
+GO:0046914,transition metal ion binding,14,10,8.08,0.46249,no
+GO:0043169,cation binding,16,11,9.24,0.54531,no
+GO:0140098,"catalytic activity, acting on RNA",9,6,5.2,0.55701,no
+GO:0046872,metal ion binding,15,10,8.66,0.57193,no
+GO:0016829,lyase activity,5,2,2.89,0.59984,no
+GO:0019787,ubiquitin-like protein transferase activity,8,4,4.62,0.72954,no
+GO:0016787,hydrolase activity,57,21,32.92,0.80903,no
+GO:0016874,ligase activity,5,2,2.89,0.82445,no
+GO:0003824,catalytic activity,155,78,89.51,0.8637,no
+GO:0140096,"catalytic activity, acting on a protein",49,21,28.3,0.9023,no
+GO:0005515,protein binding,24,14,13.86,0.91696,no
+GO:0008233,peptidase activity,18,0,10.39,0.99603,no
+GO:0004175,endopeptidase activity,15,0,8.66,0.9961,no
+GO:0004298,threonine-type endopeptidase activity,14,0,8.08,0.99614,no
+GO:0070003,threonine-type peptidase activity,14,0,8.08,0.99614,no
+GO:0003674,molecular_function,284,164,164,1,no
