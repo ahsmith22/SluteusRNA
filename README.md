@@ -14,6 +14,8 @@ All code can be found within one R markdown file:
 
 - Suilu4_GeneCatalog_proteins_20170628_GO.tab: GO annotation file downloaded from JGI Mycocosm
 
+- gene_to_GO.txt: custom annotation file for the GO analysis in TopGO
+
 - sampledata.csv: file used for DESeq analyses, contains sample IDs and library names
 
 - treatData.csv: file used for DESeq analyses, contains treatment data
@@ -32,14 +34,18 @@ All code can be found within one R markdown file:
 
 ### Tables
 
+- modulesforGSEA: folder containing all files produced by the WGCNA for further GSEA
+
 - DEGInte.txt: list of DEGs from the interaction contrast
 
 - DEGTvSe.txt: list of DEGs from the tolerance contrast
 
 - DEGZne.txt: list of DEGs from the zinc contrast
 
-- DEGall.txt: list of DEGs from all 3 contrasts 
-- DEGall1.txt: list of DEGs from all 3 contrasts, lfc > 1 
+- DEGall.txt: list of DEGs from all 3 contrasts
+
+- DEGall1.txt: list of DEGs from all 3 contrasts, lfc > 1
+  
 - annastInte.csv: DESeq results for candidate genes for the interaction contrast
 
 - annastSzn.csv: DESeq results for candidate genes for sensitive isolates for the zinc contrast (used for Table 1)
