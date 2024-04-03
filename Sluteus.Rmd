@@ -1063,21 +1063,21 @@ midnightblueZnrank$gene <- gsub("jgi.p\\|Suilu4\\|", "\\", midnightblueZnrank$ge
 turquoiseZnrank$gene <- gsub("jgi.p\\|Suilu4\\|", "\\", turquoiseZnrank$gene)
 
 ## output the rank lists as cvs for GSEA 
-write.csv(lightgreenECrank, "modulesforGSEA/lightgreenECrank.csv") 
-write.csv(magentaECrank, "modulesforGSEA/magentaECrank.csv") 
-write.csv(greenECrank, "modulesforGSEA/greenECrank.csv") 
-write.csv(blackECrank, "modulesforGSEA/blackECrank.csv") 
-write.csv(midnightblueZnrank, "modulesforGSEA/midnightblueZnrank.csv") 
-write.csv(turquoiseZnrank, "modulesforGSEA/turquoiseZnrank.csv") 
+write.csv(lightgreenECrank, "~/SluteusRNA/Tables/modulesforGSEA/lightgreenECrank.csv") 
+write.csv(magentaECrank, "~/SluteusRNA/Tables/modulesforGSEA/magentaECrank.csv") 
+write.csv(greenECrank, "~/SluteusRNA/Tables/modulesforGSEA/greenECrank.csv") 
+write.csv(blackECrank, "~/SluteusRNA/Tables/modulesforGSEA/blackECrank.csv") 
+write.csv(midnightblueZnrank, "~/SluteusRNA/Tables/modulesforGSEA/midnightblueZnrank.csv") 
+write.csv(turquoiseZnrank, "~/SluteusRNA/Tables/modulesforGSEA/turquoiseZnrank.csv") 
 
 
 ### GO ANALYSIS ON MODULES
 # read the GO mapping file - contains which GO terms relate to which genes
-gene_to_go_mapping <- readMappings(file = "~/Desktop/Branco Lab/Results/SluteusRNA/gene_to_GO.txt", 
+gene_to_go_mapping <- readMappings(file = "~/SluteusRNA/Data/gene_to_GO.txt", 
                                    sep = "\t", IDsep = ",")
 
 ## input for GO analysis ## NEEDS CHANGED DEPENDING ON WHAT YOURE LOOKING AT
-ECgenes <- read.csv("modulesforGSEA/midnightblueZnrank.csv", header = T)
+ECgenes <- read.csv("~/SluteusRNA/Tables/modulesforGSEA/midnightblueZnrank.csv", header = T)
 
 # first, get only the name and the p value - change if looking at Zn or EC trait
 deGenes_Universe <- ECgenes %>%
@@ -1123,7 +1123,7 @@ tabKS$raw.p.value <- as.numeric(tabKS$raw.p.value)
 tabKS
 
 ##write results to csv - change if needed!
-write_csv(tabKS, "MFmidnightblue.csv")
+write_csv(tabKS, "~/SluteusRNA/Tables/MFmidnightblue.csv")
   
 
 
@@ -1145,7 +1145,7 @@ forGSEAZn$rank <- -log10(forGSEAZn$p.val)
 
 forGSEAZn <- arrange(forGSEAZn, desc(rank))
 head(forGSEAZn)
-write.csv(forGSEAZn, "Zn_treatment_correlated_genes.csv") 
+write.csv(forGSEAZn, "~/SluteusRNA/Tables/Zn_treatment_correlated_genes.csv") 
 
 
 ## Now for EC50 correlated genes
@@ -1171,7 +1171,7 @@ forGSEAEC50$rank <- -log10(forGSEAEC50$p.val)
 forGSEAEC50 <- arrange(forGSEAEC50, desc(rank))
 head(forGSEAEC50)
 
-write.csv(forGSEAEC50, "EC50_correlated_genes.csv") 
+write.csv(forGSEAEC50, "~/SluteusRNA/Tables/EC50_correlated_genes.csv") 
 
 # perform GSEA preranked manually on GSEA GUI 
 
