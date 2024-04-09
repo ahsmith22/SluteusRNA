@@ -144,6 +144,7 @@ keyvals <- ifelse(
 keyvals[is.na(keyvals)] <- 'black'
 names(keyvals)[keyvals == 'red'] <- 'upregulated'
 names(keyvals)[keyvals == 'blue'] <- 'down-regualted'
+table(keyvals) # number of up/down-regulated
 
 EnhancedVolcano(resLM12df,
                 lab = rownames(resLM12df),
@@ -181,6 +182,7 @@ keyvals <- ifelse(
 keyvals[is.na(keyvals)] <- 'black'
 names(keyvals)[keyvals == 'red'] <- 'upregulated'
 names(keyvals)[keyvals == 'blue'] <- 'down-regualted'
+table(keyvals) # number of up/down-regulated
 
 EnhancedVolcano(resLM3df,
                 lab = rownames(resLM3df),
@@ -218,6 +220,7 @@ keyvals <- ifelse(
 keyvals[is.na(keyvals)] <- 'black'
 names(keyvals)[keyvals == 'red'] <- 'upregulated'
 names(keyvals)[keyvals == 'blue'] <- 'down-regualted'
+table(keyvals) # number of up/down-regulated
 
 EnhancedVolcano(resLM5df,
                 lab = rownames(resLM5df),
@@ -255,6 +258,7 @@ keyvals <- ifelse(
 keyvals[is.na(keyvals)] <- 'black'
 names(keyvals)[keyvals == 'red'] <- 'upregulated'
 names(keyvals)[keyvals == 'blue'] <- 'down-regualted'
+table(keyvals) # number of up/down-regulated
 
 EnhancedVolcano(resLMD7df,
                 lab = rownames(resLMD7df),
@@ -292,6 +296,7 @@ keyvals <- ifelse(
 keyvals[is.na(keyvals)] <- 'black'
 names(keyvals)[keyvals == 'red'] <- 'upregulated'
 names(keyvals)[keyvals == 'blue'] <- 'down-regualted'
+table(keyvals) # number of up/down-regulated
 
 EnhancedVolcano(resP1df,
                 lab = rownames(resP1df),
@@ -329,6 +334,7 @@ keyvals <- ifelse(
 keyvals[is.na(keyvals)] <- 'black'
 names(keyvals)[keyvals == 'red'] <- 'upregulated'
 names(keyvals)[keyvals == 'blue'] <- 'down-regualted'
+table(keyvals) # number of up/down-regulated
 
 EnhancedVolcano(resP13df,
                 lab = rownames(resP13df),
@@ -366,6 +372,7 @@ keyvals <- ifelse(
 keyvals[is.na(keyvals)] <- 'black'
 names(keyvals)[keyvals == 'red'] <- 'upregulated'
 names(keyvals)[keyvals == 'blue'] <- 'down-regualted'
+table(keyvals) # number of up/down-regulated
 
 EnhancedVolcano(resP2df,
                 lab = rownames(resP2df),
@@ -403,6 +410,7 @@ keyvals <- ifelse(
 keyvals[is.na(keyvals)] <- 'black'
 names(keyvals)[keyvals == 'red'] <- 'upregulated'
 names(keyvals)[keyvals == 'blue'] <- 'down-regualted'
+table(keyvals) # number of up/down-regulated
 
 EnhancedVolcano(resPD13df,
                 lab = rownames(resPD13df),
@@ -440,6 +448,7 @@ keyvals <- ifelse(
 keyvals[is.na(keyvals)] <- 'black'
 names(keyvals)[keyvals == 'red'] <- 'upregulated'
 names(keyvals)[keyvals == 'blue'] <- 'down-regualted'
+table(keyvals) # number of up/down-regulated
 
 EnhancedVolcano(resPD14df,
                 lab = rownames(resPD14df),
@@ -477,6 +486,7 @@ keyvals <- ifelse(
 keyvals[is.na(keyvals)] <- 'black'
 names(keyvals)[keyvals == 'red'] <- 'upregulated'
 names(keyvals)[keyvals == 'blue'] <- 'down-regualted'
+table(keyvals) # number of up/down-regulated
 
 EnhancedVolcano(resSl20df,
                 lab = rownames(resSl20df),
@@ -508,6 +518,7 @@ pcaDataTvSa = pcaDataTvS %>% group_by(group) %>% summarise(PC1a = mean(PC1), PC1
 pcaDataTvSa = inner_join(pcaDataTvSa, pcaDataTvS[,c(3:6,8,9)])
 pcaDataTvSa = pcaDataTvSa %>% distinct()
 pcaDataTvSa$Tolerance = factor(pcaDataTvSa$Tolerance, levels = c("Sensitive", "Tolerant"))
+pcaDataTvSa$siteID = c("C5","C5","C2","C2","C4","C4","C1","C1","NC1","NC1","NC3","NC3","NC2","NC2","NC5","NC5","NC4","NC4","C3","C3")
 
 # plot PCA (Figure 2)
 pcaTvSa = ggplot(pcaDataTvSa, aes(PC1a, PC2a, color = Tolerance, fill = Tolerance)) + 
@@ -515,7 +526,7 @@ pcaTvSa = ggplot(pcaDataTvSa, aes(PC1a, PC2a, color = Tolerance, fill = Toleranc
   stat_ellipse(geom = "polygon", level = .95, alpha = 0.1, show.legend = F) +
   geom_errorbar(aes(ymin=PC2a-PC2se, ymax=PC2a+PC2se), alpha=0.5) +
   geom_errorbarh(aes(xmin=PC1a-PC1se, xmax=PC1a+PC1se), alpha=0.5) +
-  geom_text_repel(aes(label = locID), nudge_x = -1.2, nudge_y = 0.3, size = 2, max.overlaps = 100) +
+  geom_text_repel(aes(label = siteID), nudge_x = -1.2, nudge_y = 0.3, size = 2, max.overlaps = 100) +
   xlab(paste0("PC1: ",percentVarTvS[1],"% variance")) +
   ylab(paste0("PC2: ",percentVarTvS[2],"% variance"))
 # ggsave("~/SluteusRNA/Figures/pcaTvSa.png", width = 9, height = 6, scale = .85)
@@ -641,6 +652,13 @@ DEGa = unique(c(DEGZnetot,DEGTvSetot,DEGIntetot))
 # write.table(DEGa, "~/SluteusRNA/Tables/DEGall.txt", row.names = F, col.names = F)
 DEGa1 = unique(c(DEGZne,DEGTvSe,DEGInte))
 # write.table(DEGa1, "~/SluteusRNA/Tables/DEGall1.txt", row.names = F, col.names = F)
+
+# produce list of unannotated genes
+SlutGO = read_tsv("~/SluteusRNA/Data/Suilu4_GeneCatalog_proteins_20170628_GO.tab")
+SlutGO$`#proteinId` = paste("jgi.p|Suilu4|", SlutGO$`#proteinId`, sep="")
+DEGguf = DEGa[!DEGa %in% SlutGO$`#proteinId`] # 4021 genes of unknown function
+# write.table(DEGguf, "~/SluteusRNA/Tables/DEGguf.txt", row.names = F, col.names = F)
+DEGannot = DEGa[DEGa%in%SlutGO$`#proteinId`] # 2710 annotated genes
 
 # Volcano plots based on model groups (Zn, Tvs, and Int)
 VolZne = EnhancedVolcano(data.frame(resZne), lab = rownames(resZne), x = 'log2FoldChange', y = 'padj',
