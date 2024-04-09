@@ -45,6 +45,8 @@ All code can be found within one R markdown file:
 - DEGall.txt: list of DEGs from all 3 contrasts
 
 - DEGall1.txt: list of DEGs from all 3 contrasts, lfc > 1
+
+- DEGguf.txt: list of DEGs with no GO annotation
   
 - annastInte.csv: DESeq results for candidate genes for the interaction contrast
 
