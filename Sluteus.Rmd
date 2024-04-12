@@ -69,7 +69,7 @@ ecplotdf$siteID = c("NC2","NC3","NC1","NC4","C1","NC5","C3","C4","C5","C2")
 ecplotdf$Tolerance = c(rep("Sensitive",4),rep("Tolerant",6))
 ecplotdf$Tolerance = factor(ecplotdf$Tolerance, levels = c("Sensitive","Tolerant"))
 ecplotdf$locID = factor(ecplotdf$locID, levels = c("P1","P2","P13","PD14","PD13","LMD7","LM3","Sl20","LM5","LM12"))
-ecplotdf$siteID = factor(ecplotdf$siteID, levels = c("NC1","NC2","NC3","NC4","C1","NC5","C2","C3","C4","C5"))
+ecplotdf$siteID = factor(ecplotdf$siteID, levels = c("NC1","NC2","NC3","NC4","NC5","C1","C2","C3","C4","C5"))
 
 ECplot = ggplot(ecplotdf, aes(x=siteID, y=EC50,shape=Site,color=Tolerance)) +
   geom_point(size = 5) +
