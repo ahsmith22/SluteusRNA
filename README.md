@@ -4,9 +4,11 @@ Data and analysis to accompany Smith et al., "Comparative transcriptomics provid
 
 - SluteusRNA.Rproj: Rstudio project file for all analyses
 
-All code can be found within one R markdown file:
+Code used in analyses can be found within one R file and one R markdown file:
 
-- Sluteus.Rmd: Code for all analyses for the project
+- EC50_R.R: Code for the calculation of EC50 values
+
+- Sluteus.Rmd: Code for all other analyses for the project
 
 ### Data
 
