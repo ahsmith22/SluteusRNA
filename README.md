@@ -30,6 +30,8 @@ Code used in analyses can be found within one R file and one R markdown file:
 
 - VolInte.png - VolZne.png: all Volcano Plots for the 10 isolates and 3 model contrasts (13 total)
 
+- cor.resy/n.jpg: Supplemental Figure 7, correlation matrix result figure
+
 - pcaTvSa.png: Figure 2 from the manuscript, PCA plot of the gene expression of all samples
 
 - vennmaintot.png: Supplemental Figure 1, Venn diagram of all DEGs from the 3 model contrasts
