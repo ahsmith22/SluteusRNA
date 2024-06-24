@@ -15,6 +15,7 @@ library(EnhancedVolcano)
 library(ggplot2)
 library(data.table)
 library(RColorBrewer)
+library(paletteer)
 library(VennDiagram)
 library(gplots)
 library(factoextra)
@@ -61,6 +62,7 @@ sampleDataj$allID = paste0(sampleDataj$locID, "_", substr(sampleDataj$znID,1,1))
 sampleDataEC = sampleDataj
 sampleDataEC$EC50 = c(rep(74.97,6),rep(77.06,5),rep(61.34,5),rep(103.93,6),rep(142.78,6),rep(207.78,6),rep(573.91,6),rep(641.84,6),rep(936.98,6),rep(396.10,6))
 sampleDataEC$tolID = c(rep("s",6),rep("s",5),rep("s",5),rep("s",6),rep("t",6),rep("t",6),rep("t",6),rep("t",6),rep("t",6),rep("t",6))
+sampleDataEC$tolID = as.factor(sampleDataEC$tolID)
 
 # EC50 plot (Figure 1)
 ecplotdf = sampleDataEC[c(1,7,12,17,23,29,35,41,47,53),c(2,5,7)]
@@ -109,10 +111,72 @@ ddsTvS = DESeq(ddsTvS)
 cbind(resultsNames(ddsTvS))
 
 normalized_countsTvS = counts(ddsTvS, normalized=T)
+
+# produce correlation matrices for normalized counts across all samples in control and high Zn conditions (Fig S7)
+sampleDataECn = sampleDataEC[sampleDataEC$znID=="nZn",]
+sampleDataECy = sampleDataEC[sampleDataEC$znID=="yZn",]
+sampleDataECn = left_join(sampleDataECn, ecplotdf[,c(1,5)], by = "locID")
+sampleDataECy = left_join(sampleDataECy, ecplotdf[,c(1,5)], by = "locID")
+sampleDataECn$siteID = as.character(sampleDataECn$siteID)
+sampleDataECy$siteID = as.character(sampleDataECy$siteID)
+sampleDataECn$repID = as.character(sampleDataECn$repID)
+sampleDataECy$repID = as.character(sampleDataECy$repID)
+
+normalized_countsTvSn = normalized_countsTvS[,colnames(normalized_countsTvS) %in% sampleDataECn$libraryName]
+normalized_countsTvSy = normalized_countsTvS[,colnames(normalized_countsTvS) %in% sampleDataECy$libraryName]
+
+for (x in 1:ncol(normalized_countsTvSn)) {
+  libname = colnames(normalized_countsTvSn)[x]
+  rown = which(sampleDataECn$libraryName == libname)
+  name = paste0(sampleDataECn$siteID[rown], sampleDataECn$repID[rown])
+  colnames(normalized_countsTvSn)[x] = name
+}
+
+for (x in 1:ncol(normalized_countsTvSy)) {
+  libname = colnames(normalized_countsTvSy)[x]
+  rown = which(sampleDataECy$libraryName == libname)
+  name = paste0(sampleDataECy$siteID[rown], sampleDataECy$repID[rown])
+  colnames(normalized_countsTvSy)[x] = name
+}
+
+# run correlation analysis
+cor.resn = cor(normalized_countsTvSn)
+cor.resy = cor(normalized_countsTvSy)
+
+# output heatmaps for correlation matrices
+heatcol = rev(as.vector(paletteer_c("grDevices::Reds", 100))[10:100])
+
+jpeg(file="cor.resn.jpg", width = 2000, height = 2000, res = 200)
+heatmap.2(cor.resn, 
+          dendrogram = "row", 
+          density.info = "none", 
+          trace = "none", 
+          col = heatcol,
+          cexRow = 1.5,
+          cexCol = 1.5,
+          key.title = NA,
+          key.xlab = "Correlation",
+          lhei = c(1,7),
+          lwid = c(1,4))
+dev.off()
+
+jpeg(file="cor.resy.jpg", width = 2000, height = 2000, res = 200)
+heatmap.2(cor.resy, 
+          dendrogram = "row", 
+          density.info = "none", 
+          trace = "none", 
+          col = heatcol,
+          cexRow = 1.5,
+          cexCol = 1.5,
+          key.title = NA,
+          key.xlab = "Correlation",
+          lhei = c(1,7),
+          lwid = c(1,4))
+dev.off()
 ```
 
 ```{r volcano plots}
-# create volcano plots for each individual isolate
+# create volcano plots for each individual isolate (Fig S4)
 
 sampleDataEC1 = split(sampleDataEC, f = sampleDataEC$locID) #split data by isolate
 
@@ -556,27 +620,29 @@ adonisTvS_adjpvals
 ```
 
 ```{r contrasts}
-# build contrasts
+# build model contrasts to analyze our 3 gene groups of interest
+# Here, we use matrix multiplication to isolate
 conT = c(1,1/6,1/6,1/6,0,0,0,1/6,0,1/6,
-         1/2,1/12,1/12,1/12,0,0,0,1/12,0,1/12)
+         1/2,1/12,1/12,1/12,0,0,0,1/12,0,1/12) # all tolerant isolates
 conTn = c(1,1/6,1/6,1/6,0,0,0,1/6,0,1/6,
-          0,0,0,0,0,0,0,0,0,0)
+          0,0,0,0,0,0,0,0,0,0) # tolerant isolates in control Zn
 conTy = c(1,1/6,1/6,1/6,0,0,0,1/6,0,1/6,
-          1,1/6,1/6,1/6,0,0,0,1/6,0,1/6)
-conTzn = conTy - conTn
+          1,1/6,1/6,1/6,0,0,0,1/6,0,1/6) # tolerant isolates in high Zn
+conTzn = conTy - conTn # the contrast between tolerant isolates in high Zn and control Zn
 conS = c(1,0,0,0,1/4,1/4,1/4,0,1/4,0,
-         1/2,0,0,0,1/8,1/8,1/8,0,1/8,0)
+         1/2,0,0,0,1/8,1/8,1/8,0,1/8,0) # all sensitive isolates
 conSn = c(1,0,0,0,1/4,1/4,1/4,0,1/4,0,
-          0,0,0,0,0,0,0,0,0,0)
+          0,0,0,0,0,0,0,0,0,0) # sensitive isolates in control Zn
 conSy = c(1,0,0,0,1/4,1/4,1/4,0,1/4,0,
-          1,0,0,0,1/4,1/4,1/4,0,1/4,0)
-conSzn = conSy - conSn
-conTvSe = conT - conS
-conInte = conTzn - conSzn
+          1,0,0,0,1/4,1/4,1/4,0,1/4,0) # sensitive isolates in high Zn
+conSzn = conSy - conSn # the contrast between sensitive isolates in high Zn and control Zn
+conTvSe = conT - conS # the contrast between all tolerant and all sensitive isolates
+conInte = conTzn - conSzn # the interaction effect or the contrast between the contrasts of tolerant and sensitive isolates across high Zn and control Zn conditions
 conZne = c(0,0,0,0,0,0,0,0,0,0,
-          1,1/10,1/10,1/10,1/10,1/10,1/10,1/10,1/10,1/10)
+          1,1/10,1/10,1/10,1/10,1/10,1/10,1/10,1/10,1/10) # the contrast between all isolates grown in high Zn and control Zn conditions
 
 # results tables
+# Now we use the contrasts assembled above and output results tables with log2foldchange values for each gene
 resTvSe = results(ddsTvS, contrast = conTvSe, cooksCutoff=FALSE)
 resTvSedf = as.data.frame(resTvSe@listData)
 rownames(resTvSedf) = resTvSe@rownames
@@ -597,7 +663,7 @@ resSzn = results(ddsTvS, contrast = conSzn, cooksCutoff=FALSE)
 resSzndf = as.data.frame(resSzn@listData)
 rownames(resSzndf) = resSzn@rownames
 
-# count tables for all DEGs in contrasts
+# lists of all DEGs in different contrasts
 thresholdj = resZne$padj < padj.cutoff
 resZne$thresholdj = thresholdj
 sigZnetot = data.frame(subset(resZne, thresholdj==TRUE))
@@ -628,7 +694,7 @@ sigSzntot = data.frame(subset(resSzn, thresholdj==TRUE))
 norm_sigSzntot = as.matrix(normalized_countsTvS[rownames(sigSzntot),])
 DEGSzntot = rownames(norm_sigSzntot)
 
-# count tables for DEGs lfc > 1 in 3 contrasts
+# lists of all DEGs with lfc > 1 in 3 contrasts
 thresholdj = resTvSe$padj < padj.cutoff & abs(resTvSe$log2FoldChange) > lfc.cutoff
 resTvSe$thresholdj = thresholdj
 sigTvSe = data.frame(subset(resTvSe, thresholdj==TRUE))
