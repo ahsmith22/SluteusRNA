@@ -51,6 +51,8 @@ Code used in analyses can be found within one R file and one R markdown file:
 - DEGall1.txt: list of DEGs from all 3 contrasts, lfc > 1
 
 - DEGguf.txt: list of DEGs with no GO annotation
+
+- a_tolerance_groups_l2fc.csv: log-fold change values for tolerance group contrast
   
 - annastInte.csv: DESeq results for candidate genes for the interaction contrast
 
@@ -62,7 +64,13 @@ Code used in analyses can be found within one R file and one R markdown file:
 
 - annastzne.csv: DESeq results for candidate genes for the zinc contrast (used for Table 1)
 
+- b_Zn_treatment_l2fc.csv: log-fold change values for Zn treatment contrast
+
+- c_tolerant_Zn_treat_l2fc.csv: log-fold change values for the tolerant Zn treatment contrast
+
 - comparisonLm12.deseq.csv - comparisonSl20.deseq.csv: DESeq results tables for DESeq analyses for individual isolates
+
+- d_sensitive_Zn_treat_l2fc.csv: log-fold change values for the sensitive Zn treatment contrast
 
 - normcountsLm12.csv - normcountsSl20.csv: normalized count files from DESeq analyses for individual isolates
 
